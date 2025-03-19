@@ -1,0 +1,52 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+
+\title{Exploring Bacon's Law; How Interconnected is Hollywood?}
+\author{Tai Poole, Nabhan Rashid, Danny Tran}
+\date{March 5, 2025}
+
+\begin{document}
+
+
+
+\maketitle
+
+\# TODO - Finish this properly, and read the comments from the TA on Part 1
+
+\section{Problem Description}
+There is a well known pop culture game known as the “Bacon Number Game”. The Bacon Number Game revolves around the conjecture of Bacon’s Law that every actor in Hollywood is connected to Kevin Bacon through 6 degrees of separation or less ("Six Degrees of Kevin Bacon"). The game is then to find this path. If we consider each actor a vertex in a graph, two actors are related when they have acted in the same movie, which we define as an edge. The degree of separation is defined as the smallest path length between two actors. Note that similar to the definition of a path for graphs, Kevin Bacon is the only person with a Kevin Bacon number of 0. One might also know this system by the similar game in math, the Erdős number, or the similar popular game The Wiki game ("Wikipedia:Wiki Game"). \\\\
+It’s an amusing thought experiment, suggesting that Hollywood isn’t that big and most of our movies are just the same few actors over and over again or that at some point, every actor in Hollywood has worked with each other. As our group was discussing it, we also reflected on why the focus was Kevin Bacon, an actor we did not feel was very popular anymore. This was because the Bacon number was conceived in 1994, back when Kevin Bacon was a much larger presence in pop culture. Because of this, we wanted to generalize the Bacon number to see the degrees of separation of any two actors, to make it more generalizable and timeless. $\textbf{In this project, we seek to understand the level of }\\ \textbf{interconnectivity between professionals in the movie industry,}\\ \textbf{and to examine the legitimacy of the famous Bacon’s Law.}$
+
+\section{Computation Plan}
+For our domain, we are going to use the IMDb movie datasets ("IMDB"). To make our connections we will use the [title.principals.tsv.gz] database; which contains every role in the various IMDb movies along with associated Actor IDs, Movie IDs and their role names. Additionally, we are using two additional databases to match Movie IDs with Movie Names and Actor IDs and Actor names [name.basics.tsv.gz and title.basics.tsv.gz].\\\\
+\begin{verbatim}
+    tconst    ordering    nconst    category    job    characters
+tt0000001    1    nm1588970    self    \N    ["Self"]
+tt0000002    1    nm0721526    director    \N    \N
+tt0000005    1    nm0443482    actor    \N    ["Blacksmith"]
+\end{verbatim}
+The data from the three datasets are TSV files with string IDs identifying actors and movies. Actors are identified with alphanumeric strings beginning with “nm” (such as nm0000001 for “Fred Astaire”) and movies are identified with similar strings beginning with “tt” (such as tt0133093 for “The Matrix”). From this dataset we will create individual nodes using the actor dataset, with actor IDs and actor names as attributes, then connect them with edges using the “principals” dataset with edges that have the attributes of the connecting movies (movie name and ID) to create a graph to represent our actor connectedness. Our vertices of this graph will be actors, with edges between actors being the existence of a movie they were both in. To find the connections and distances between actors, we will use pathfinding algorithms on our graphs, for which there have been many well documented examples we can pull on. Since we have an undirected, unweighted graph, we can just use BFS ("Breadth First Search"). However, we are also considering introducing weights to our edges if we can find a reasonable weighting scheme, and this might require more complex path-finding algorithm like Djikstra’s ("Find Shortest Paths using Dijkstra's Algorithm”) or A* ("A* search algorithm"). \\\\
+We will be building the data type from the ground up, and we will need to read the data, which is stored as a TSV, and process it into nodes and edges. This processing will require usage of the csv module’s TSV capabilities ("CSV File Reading and Writing"). To do this we will be processing three data sets from the given data set. Due to how it is set up, there will be three main data variables; two dictionaries will relate the id to the name, one for the movies and one for the people, and a graph will relate people ids, with edges representing movies both people have acted in.\\\\
+The graph specifically will be the data structure created by NetworkX. This is specifically for the fact that it allows for attributes on the nodes and edges, and has support for multigraphs, as two actors may have acted in multiple movies together, and in fact may act in multiple movies together on purpose. The edges will have an attribute for the movie’s id, and the nodes will have the id of the actor. By doing this, we can easily output the graph for found path’s nodes, as we can use the subgraph method for graphs in NetworkX to receive a graph that can be printed with all the necessary information. NetworkX will be what creates the graph itself, as after getting the subgraph, NetworkX can draw the graph with matplotlib ("Drawing Documentation"). The induced subgraph will include random connected nodes for aesthetics, and in the cases where two actors have played in many movies together, the induced subgraph will only include some of those edges. \\\\
+To process the user input, we will use the GUI library tkinter. Tkinter functions by creating a Tk class which serves as a window container for miscellaneous “widgets”. These widgets will be our interactable elements such as text input fields and buttons to allow the user to more easily interact with the program than just a CLI ("tkinter"). Once the user inputs their query and it is processed by the program, we will display the result using NetworkX. What will happen is we will make a call to the NetworkX draw method to draw the graph itself, before making a call to the NetworkX draw\_networkx\_edge\_labels method and finally making a call to the matplotlib method draw which will open the graph in a new window ("Matplotlib 3.1.2 documentation").
+
+\section{Bibliography}
+
+Belwariar, Rachit. “A* Search Algorithm.” GeeksforGeeks, 30 July 2024, https://www.geeksforgeeks.org/a-search-algorithm/. Accessed 4 March 2025.\\\\
+Chayes, Lincoln, et al. “Erdős number.” Wikipedia, https://en.wikipedia.org/wiki/Erd\%C5\%91s\_number. Accessed 1 March 2025.\\\\
+“csv — CSV File Reading and Writing — Python 3.13.2 documentation.” Python Docs, https://docs.python.org/3/library/csv.html. Accessed 5 March 2025.\\\\
+“Documentation for Show.” matplotlib.pyplot.show - "Matplotlib 3.1.2 documentation." Accessed March 2, 2025. https://matplotlib.org/3.1.1/api/\_as\_gen/matplotlib.pyplot.show.html.\\\\
+“Drawing Documentation.” Drawing - NetworkX 3.4.2 documentation. Accessed March 2, 2025. https://networkx.org/documentation/stable/reference/drawing.html.\\\\
+IMDB. “IMDb Data Files.” IMDb Data Files Download, 2024, https://datasets.imdbws.com/. Accessed 1 March 2025.\\\\
+Jain, Sandeep. “Breadth First Search or BFS for a Graph.” GeeksforGeeks, 26 February 2025, https://www.geeksforgeeks.org/breadth-first-search-or-bfs-for-a-graph/. Accessed 2 March 2025.\\\\
+Jain, Sandeep. “Find Shortest Paths from Source to all Vertices using Dijkstra's Algorithm.” GeeksforGeeks, 26 February 2025, https://www.geeksforgeeks.org/dijkstras-shortest-path-algorithm-greedy-algo-7/. Accessed 2 March 2025.\\\\
+“Six Degrees of Kevin Bacon.” Wikipedia, https://en.wikipedia.org/wiki/Six\_Degrees\_of\_Kevin\_Bacon. Accessed 1 March 2025.\\\\
+“tkinter — Python interface to Tcl/Tk — Python 3.13.2 documentation.” Python Docs, https://docs.python.org/3/library/tkinter.html\#module-tkinter. Accessed 3 March 2025.\\\\
+“Wikipedia:Wiki Game.” Wikipedia, https://en.wikipedia.org/wiki/Wikipedia:Wiki\_Game. Accessed 1 March 2025.\\\\
+IMDb has asked that we source their dataset as such:\\
+Information courtesy of
+IMDb
+(https://www.imdb.com).
+Used with permission.
+
+\end{document}
