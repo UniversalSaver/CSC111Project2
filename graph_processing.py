@@ -12,6 +12,23 @@ MOVIE_TO_ACTOR = 'data_files/title.basics.tsv'
 
 class ActorGraph:
     """
+    An abstract class that defines how the methods for the actual actor graphs should work
+    """
+    def shortest_path(self, actor1: str, actor2: str) -> list[str]:
+        """
+        Given two actors, return the shortest path between the actors
+        """
+        raise NotImplementedError
+
+    def output_graph(self, actors: list[str], movies: list[str]):
+        """
+        Creates a new window with a graph induced by the given actors and movies.
+        """
+        raise NotImplementedError
+
+
+class ShortestActorGraph(ActorGraph):
+    """
     A class with the graph which will process the functions such as shortest_path or new_bacon
     """
     # Private Instance Attributes:
@@ -51,10 +68,47 @@ class ActorGraph:
         """
         # TODO
 
-    def output_graph(self) -> None:
+    def output_graph(self, actors: list[str], movies: list[str]) -> None:
         """
         Creates a new window with an induced subgraph depending on the given actors and edges.
 
         TODO - Decide what this should take in and what Preconditions those things should have
+        """
+        # TODO
+
+
+class WeightedActorGraph(ActorGraph):
+    """
+    A class very similar to ActorGraph, except the edges are weighted to funnel towards the most popular movie that is
+    found. This allows for faster path-finding between two actors, but it is not guaranteed to find the shortest path.
+    """
+
+    # Private Instance Attributes:
+    #   - _actor_graph: a graph with actors and movies as vertices. A movie and an actor will have an edge if the actor
+    #                   has played in the movie. There are no edges between actors and no edges between movies. The
+    #                   actors and movies are represented as their IDs. The edges will also have weights, which are how
+    #                   far it is from _popular_movie
+    #   - _popular_movie: A string containing the ID of a popular movie
+
+    _actor_graph: nx.MultiGraph
+    _popular_movie: str
+
+    def __init__(self) -> None:
+        """
+        Process the data from the constants and create a
+        """
+        # TODO
+
+    def shortest_path(self, actor1: str, actor2: str) -> list[str]:
+        """
+        Will find the shortest path between actor1 and actor2 by finding a path between the actors and popular_movie.
+        The combined path can then be found and that will be a path between the two actors.
+        """
+        # TODO
+
+    def output_graph(self, actors: list[str], movies: list[str]):
+        """
+        Will create a new window with a graph induced by the given actors and movies, color-coding them to show which is
+        which.
         """
         # TODO
