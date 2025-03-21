@@ -4,16 +4,65 @@ The file where functions for processing the data will be.
 # TODO - add copyright
 """
 import networkx as nx
+import csv
 
 ID_TO_ACTOR = 'data_files/name.basics.tsv'
 ID_TO_MOVIE = 'data_files/title.basics.tsv'
 MOVIE_TO_ACTOR = 'data_files/title.basics.tsv'
 
 
+class FileFormatError(Exception):
+    """
+    An error raised during file reading if the format of the file is incorrect
+    """
+    def __str__(self):
+        """
+        Return a string representation of this exception
+        """
+        return "The file attempted to be read is not in the correct format"
+
+
 class ActorGraph:
     """
     An abstract class that defines how the methods for the actual actor graphs should work
     """
+
+    # Private Instance Attributes:
+    #   - _actor_graph: A graph representing the actors in some way
+    #   - _actors: A graph mapping actor IDs to the name
+    #   - _movies: A graph mapping movie IDs to the title
+
+    _actor_graph: nx.MultiGraph
+    _actors: dict[str, str]
+    _movies: dict[str, str]
+
+    def __init__(self) -> None:
+        """
+        Initializes the _actors and _movies attributes using the files
+        """
+        self._actors = {}
+        self._movies = {}
+
+        with open(ID_TO_ACTOR) as file:
+            reader = csv.reader(file, delimiter='\t')
+
+            if not next(reader) == ['nconst', 'primaryName', 'birthYear', 'deathYear', 'primaryProfession',
+                                    'knownForTitles']:
+                raise FileFormatError
+
+            for line in reader:
+                self._actors[line[0]] = line[1]
+
+        with open(ID_TO_MOVIE) as file:
+            reader = csv.reader(file, delimiter='\t')
+
+            if not next(reader) == ['tconst', 'titleType', 'primaryTitle', 'originalTitle', 'isAdult', 'startYear',
+                                    'endYear', 'runtimeMinutes', 'genres']:
+                raise FileFormatError
+
+            for line in reader:
+                self._movies[line[0]] = line[2]
+
     def shortest_path(self, actor1: str, actor2: str) -> list[str]:
         """
         Given two actors, return the shortest path between the actors
