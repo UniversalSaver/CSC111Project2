@@ -45,9 +45,9 @@ class ActorGraph:
         Preconditions:
             - database_path refers to a valid sqlite3 database that has at least the tables "actor", "movie", and "edge"
         """
-        self._actors = {}
-        self._movies = {}
-        self._actor_graph = nx.Graph()
+        # self._actors = {}
+        # self._movies = {}
+        # self._actor_graph = nx.Graph()
         self._db_path = database_path
 
         # with open(ID_TO_ACTOR) as file:
@@ -136,7 +136,15 @@ class ActorGraph:
 
             cursor.close()
 
+    def get_adjacent_nodes(self, id: str) -> list[str]:
+        """
+        Given an actor or movie id, this function will return the adjacent nodes to that id using the database in
+        _db_path
 
+        Preconditions:
+            - id is a valid actor or movie id
+        """
+        # TODO
 
 
 class ShortestActorGraph(ActorGraph):
