@@ -8,7 +8,8 @@ import csv
 
 ID_TO_ACTOR = 'data_files/name.basics.tsv'
 ID_TO_MOVIE = 'data_files/title.basics.tsv'
-MOVIE_TO_ACTOR = 'data_files/title.basics.tsv'
+MOVIE_TO_ACTOR = 'data_files/title.principals.tsv'
+
 
 
 class FileFormatError(Exception):
@@ -31,8 +32,9 @@ class ActorGraph:
     #   - _actor_graph: A graph representing the actors in some way
     #   - _actors: A graph mapping actor IDs to the name
     #   - _movies: A graph mapping movie IDs to the title
+    # TODO: Figure out what from this is necessary now that it's database based
 
-    _actor_graph: nx.MultiGraph
+    _actor_graph: nx.Graph
     _actors: dict[str, str]
     _movies: dict[str, str]
 
@@ -42,26 +44,37 @@ class ActorGraph:
         """
         self._actors = {}
         self._movies = {}
+        self._actor_graph = nx.Graph()
 
-        with open(ID_TO_ACTOR) as file:
+        # with open(ID_TO_ACTOR) as file:
+        #     reader = csv.reader(file, delimiter='\t')
+        #
+            # if not next(reader) == ['nconst', 'primaryName', 'birthYear', 'deathYear', 'primaryProfession',
+            #                         'knownForTitles']:
+        #         raise FileFormatError
+        #
+        #     for line in reader:
+        #         self._actors[line[0]] = line[1]
+        #
+        # with open(ID_TO_MOVIE) as file:
+        #     reader = csv.reader(file, delimiter='\t')
+        #
+            # if not next(reader) == ['tconst', 'titleType', 'primaryTitle', 'originalTitle', 'isAdult', 'startYear',
+            #                         'endYear', 'runtimeMinutes', 'genres']:
+        #         raise FileFormatError
+        #
+        #     for line in reader:
+        #         self._movies[line[0]] = line[2]
+
+        with open(MOVIE_TO_ACTOR) as file:
             reader = csv.reader(file, delimiter='\t')
 
-            if not next(reader) == ['nconst', 'primaryName', 'birthYear', 'deathYear', 'primaryProfession',
-                                    'knownForTitles']:
+            if not next(reader) == ['tconst', 'ordering', 'nconst', 'category', 'job', 'characters']:
                 raise FileFormatError
 
             for line in reader:
-                self._actors[line[0]] = line[1]
-
-        with open(ID_TO_MOVIE) as file:
-            reader = csv.reader(file, delimiter='\t')
-
-            if not next(reader) == ['tconst', 'titleType', 'primaryTitle', 'originalTitle', 'isAdult', 'startYear',
-                                    'endYear', 'runtimeMinutes', 'genres']:
-                raise FileFormatError
-
-            for line in reader:
-                self._movies[line[0]] = line[2]
+                if line[3] == 'actor':
+                    self._actor_graph.add_edge(line[0], line[2])
 
     def shortest_path(self, actor1: str, actor2: str) -> list[str]:
         """
@@ -93,7 +106,7 @@ class ShortestActorGraph(ActorGraph):
         Preconditions:
             - The constants above refer to valid files
         """
-        # TODO
+        super().__init__()
 
     def shortest_path(self, actor1: str, actor2: str) -> list[str]:
         """
