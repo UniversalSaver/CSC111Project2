@@ -13,5 +13,9 @@ changed later. For now, it is just copy and pasted from the first part of this p
 
 If you're not sure what to do, then I have marked unfnished things with `# TODO`, search for them with whatever method
 you prefer.
+
+Remember to run the `sql_processing.py` file to gain access to the database. Play with it, we need to figure out how to
+properly query it. To use the script, you need the necessary files downloaded. Might add smaller files later for testing
+purposes...
 # Project Reasoning
 # TODO

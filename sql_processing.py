@@ -98,3 +98,7 @@ def create_database() -> None:
 
     cur.close()
     db.close()
+
+
+if __name__ == '__main__':
+    create_database()
