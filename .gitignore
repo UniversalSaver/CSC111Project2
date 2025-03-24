@@ -1,5 +1,6 @@
 .DS_Store
-data_files/*
+data_files/
+small_data_files/
 
 project_writeup/project_report.aux
 project_writeup/project_report.log
@@ -7,3 +8,4 @@ project_writeup/project_report.pdf
 project_writeup/project_report.synctex.gz
 
 __pycache__/
+function_to_compile_specific_movies.py
