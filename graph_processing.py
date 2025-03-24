@@ -137,7 +137,7 @@ class ActorGraph:
 
             cursor.close()
 
-    def get_adjacent_nodes(self, id: str) -> list[str]:
+    def get_adjacent_nodes(self, id: str) -> set[str]:
         """
         Given an actor or movie id, this function will return the adjacent nodes to that id using the database in
         _db_path
