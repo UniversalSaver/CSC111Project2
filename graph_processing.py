@@ -4,12 +4,11 @@ The file where functions for processing the data will be.
 # TODO - add copyright
 """
 import networkx as nx
-import csv
+import sqlite3 as sql
 
 ID_TO_ACTOR = 'data_files/name.basics.tsv'
 ID_TO_MOVIE = 'data_files/title.basics.tsv'
 MOVIE_TO_ACTOR = 'data_files/title.principals.tsv'
-
 
 
 class FileFormatError(Exception):
@@ -37,14 +36,19 @@ class ActorGraph:
     _actor_graph: nx.Graph
     _actors: dict[str, str]
     _movies: dict[str, str]
+    _db_path: str
 
-    def __init__(self) -> None:
+    def __init__(self, database_path: str) -> None:
         """
         Initializes the _actors and _movies attributes using the files
+
+        Preconditions:
+            - database_path refers to a valid sqlite3 database that has at least the tables "actor", "movie", and "edge"
         """
         self._actors = {}
         self._movies = {}
         self._actor_graph = nx.Graph()
+        self._db_path = database_path
 
         # with open(ID_TO_ACTOR) as file:
         #     reader = csv.reader(file, delimiter='\t')
@@ -66,15 +70,15 @@ class ActorGraph:
         #     for line in reader:
         #         self._movies[line[0]] = line[2]
 
-        with open(MOVIE_TO_ACTOR) as file:
-            reader = csv.reader(file, delimiter='\t')
-
-            if not next(reader) == ['tconst', 'ordering', 'nconst', 'category', 'job', 'characters']:
-                raise FileFormatError
-
-            for line in reader:
-                if line[3] == 'actor':
-                    self._actor_graph.add_edge(line[0], line[2])
+        # with open(MOVIE_TO_ACTOR) as file:
+        #     reader = csv.reader(file, delimiter='\t')
+        #
+        #     if not next(reader) == ['tconst', 'ordering', 'nconst', 'category', 'job', 'characters']:
+        #         raise FileFormatError
+        #
+        #     for line in reader:
+        #         if line[3] == 'actor':
+        #             self._actor_graph.add_edge(line[0], line[2])
 
     def shortest_path(self, actor1: str, actor2: str) -> list[str]:
         """
@@ -87,6 +91,52 @@ class ActorGraph:
         Creates a new window with a graph induced by the given actors and movies.
         """
         raise NotImplementedError
+
+    def get_actor_id(self, actor_name: str, played_in: str = '') -> str:
+        """
+        Given an actor's name, return their id.
+
+        If there are multiple of the same actor, then can be given an optional parameter 'played_in' to specify a movie
+        the actor has played in.
+
+        Returns an empty string if the actor doesn't exist, or there are more than one actor that fit the description
+
+        >>> a = ActorGraph('data_files/actors_and_movies.db')
+        >>> a.get_actor_id('Kevin Bacon')
+        ''
+        >>> a.get_actor_id('Kevin Bacon', 'Space Oddity')
+        'nm0000102'
+        """
+        with sql.connect(self._db_path) as connection:
+            cursor = connection.cursor()
+            if played_in == '':
+                response = cursor.execute("""
+                SELECT id FROM actor WHERE name = ?
+                """, (actor_name,)).fetchall()
+
+                if len(response) != 1:
+                    return ''
+                else:
+                    return response[0][0]
+            else:
+                actors_response = cursor.execute("""
+                SELECT id FROM actor WHERE name = ?
+                """, (actor_name,)).fetchall()
+
+                for actor in actors_response:
+                    movies = cursor.execute("""
+                    SELECT movie_id FROM edge WHERE actor_id = ?
+                    """, (actor[0],)).fetchall()
+
+                    for movie in movies:
+                        if played_in == cursor.execute("""
+                        SELECT title FROM movie WHERE id = ?
+                        """, (movie[0],)).fetchone()[0]:
+                            return actor[0]
+
+            cursor.close()
+
+
 
 
 class ShortestActorGraph(ActorGraph):
