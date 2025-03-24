@@ -5,6 +5,7 @@ The file where functions for processing the data will be.
 """
 import networkx as nx
 import sqlite3 as sql
+from collections import deque
 
 ID_TO_ACTOR = 'data_files/name.basics.tsv'
 ID_TO_MOVIE = 'data_files/title.basics.tsv'
@@ -170,14 +171,33 @@ class ShortestActorGraph(ActorGraph):
         """
         Given two actor IDs, return the shortest path between two actors as a sequences of actors
 
+        Returns an empty list if such a path does not exist
+
         Preconditions:
             - The actors are in the graph
         """
-        # TODO
+        queue = deque()
+        queue.append([actor1])
+        visited = set()
+
+        while queue:
+            curr_path = queue.popleft()
+            curr_node = curr_path[-1]
+
+            if curr_node == actor2:
+                return curr_path
+
+            for adjacent in self.get_adjacent_nodes(curr_node):
+                if adjacent not in visited:
+                    visited.add(adjacent)
+                    queue.append(curr_path + [adjacent])
+
+        return []
+
 
     def movie_path(self, actor_path: list[str]) -> list[str]:
         """
-        Given a path between two actors, find return a list of movies such that for every two consecutive actors in the
+        Given a path between two actors, return a list of movies such that for every two consecutive actors in the
         the path, the returned list has a movie between them. This is due to two actors possibly playing in more than
         one movie together.
 
@@ -186,7 +206,21 @@ class ShortestActorGraph(ActorGraph):
         Preconditions:
             - actor_path is a valid path
         """
-        # TODO
+        final_movie_path = []
+
+        for i in range(len(actor_path) - 1):
+            actor1 = actor_path[i]
+            actor2 = actor_path[i+1]
+
+            actor1_movies = self.get_adjacent_nodes(actor1)
+            actor2_movies = self.get_adjacent_nodes(actor2)
+
+            for movie in actor1_movies:
+                if movie in actor2_movies:
+                    final_movie_path.append(movie)
+                    break
+
+        return final_movie_path
 
     def output_graph(self, actors: list[str], movies: list[str]) -> None:
         """
