@@ -46,40 +46,7 @@ class ActorGraph:
         Preconditions:
             - database_path refers to a valid sqlite3 database that has at least the tables "actor", "movie", and "edge"
         """
-        # self._actors = {}
-        # self._movies = {}
-        # self._actor_graph = nx.Graph()
         self._db_path = database_path
-
-        # with open(ID_TO_ACTOR) as file:
-        #     reader = csv.reader(file, delimiter='\t')
-        #
-            # if not next(reader) == ['nconst', 'primaryName', 'birthYear', 'deathYear', 'primaryProfession',
-            #                         'knownForTitles']:
-        #         raise FileFormatError
-        #
-        #     for line in reader:
-        #         self._actors[line[0]] = line[1]
-        #
-        # with open(ID_TO_MOVIE) as file:
-        #     reader = csv.reader(file, delimiter='\t')
-        #
-            # if not next(reader) == ['tconst', 'titleType', 'primaryTitle', 'originalTitle', 'isAdult', 'startYear',
-            #                         'endYear', 'runtimeMinutes', 'genres']:
-        #         raise FileFormatError
-        #
-        #     for line in reader:
-        #         self._movies[line[0]] = line[2]
-
-        # with open(MOVIE_TO_ACTOR) as file:
-        #     reader = csv.reader(file, delimiter='\t')
-        #
-        #     if not next(reader) == ['tconst', 'ordering', 'nconst', 'category', 'job', 'characters']:
-        #         raise FileFormatError
-        #
-        #     for line in reader:
-        #         if line[3] == 'actor':
-        #             self._actor_graph.add_edge(line[0], line[2])
 
     def shortest_path(self, actor1: str, actor2: str) -> list[str]:
         """
@@ -107,6 +74,9 @@ class ActorGraph:
         ''
         >>> a.get_actor_id('Kevin Bacon', 'Space Oddity')
         'nm0000102'
+        >>> s = ActorGraph('small_data_files/small_db.db')
+        >>> s.get_actor_id('Leonardo DiCaprio')
+        'nm0000138'
         """
         with sql.connect(self._db_path) as connection:
             cursor = connection.cursor()
@@ -115,37 +85,65 @@ class ActorGraph:
                 SELECT id FROM actor WHERE name = ?
                 """, (actor_name,)).fetchall()
 
+                cursor.close()
                 if len(response) != 1:
                     return ''
                 else:
                     return response[0][0]
             else:
-                actors_response = cursor.execute("""
+                list_of_actors = cursor.execute("""
                 SELECT id FROM actor WHERE name = ?
                 """, (actor_name,)).fetchall()
 
-                for actor in actors_response:
-                    movies = cursor.execute("""
+                for actor in list_of_actors:
+                    movies_played_in = cursor.execute("""
                     SELECT movie_id FROM edge WHERE actor_id = ?
                     """, (actor[0],)).fetchall()
 
-                    for movie in movies:
+                    for movie in movies_played_in:
                         if played_in == cursor.execute("""
                         SELECT title FROM movie WHERE id = ?
                         """, (movie[0],)).fetchone()[0]:
+                            cursor.close()
                             return actor[0]
 
             cursor.close()
+            return ''
 
-    def get_adjacent_nodes(self, id: str) -> set[str]:
+    def get_adjacent_nodes(self, given_id: str) -> set[str]:
         """
         Given an actor or movie id, this function will return the adjacent nodes to that id using the database in
         _db_path
 
         Preconditions:
             - id is a valid actor or movie id
+
+        >>> a = ActorGraph('small_data_files/small_db.db')
+        >>> a.get_adjacent_nodes('nm0000138') == {'tt1375666', 'tt0120338'}
+        True
+        >>> a.get_adjacent_nodes('tt1375666') == {'nm0000138', 'nm0330687', 'nm0680983', 'nm0913822', 'nm0362766', 'nm2438307', 'nm0614165', 'nm0000297', 'nm0182839', 'nm0000592'}
+        True
         """
-        # TODO
+        with sql.connect(self._db_path) as connection:
+            cursor = connection.cursor()
+            if given_id[0:2] == 'tt':
+                actors = cursor.execute("""
+                SELECT actor_id FROM edge WHERE
+                movie_id = ?
+                """, (given_id,)).fetchall()
+
+                # Unpacks the list of tuples
+                cursor.close()
+                return {actor[0] for actor in actors}
+            else:
+                movies = cursor.execute("""
+                SELECT movie_id FROM edge WHERE
+                actor_id = ?
+                """, (given_id,)).fetchall()
+
+                # Unpacks the list of tuples
+                cursor.close()
+                return {movie[0] for movie in movies}
 
 
 class ShortestActorGraph(ActorGraph):
@@ -158,14 +156,14 @@ class ShortestActorGraph(ActorGraph):
 
     _actor_graph: nx.MultiGraph
 
-    def __init__(self) -> None:
+    def __init__(self, database_path) -> None:
         """
         Process the data from the constants and create a multigraph with nodes of actors, and edges as movies
 
         Preconditions:
             - The constants above refer to valid files
         """
-        super().__init__()
+        super().__init__(database_path)
 
     def shortest_path(self, actor1: str, actor2: str) -> list[str]:
         """
@@ -175,52 +173,60 @@ class ShortestActorGraph(ActorGraph):
 
         Preconditions:
             - The actors are in the graph
+
+        >>> s = ShortestActorGraph('small_data_files/small_db.db')
+        >>> s.shortest_path('nm0000206', 'nm0000138') != []
+        True
+        # >>> a = ShortestActorGraph('data_files/actors_and_movies.db')
+        # >>> a.shortest_path('nm0000206', 'nm0000138')
         """
         queue = deque()
         queue.append([actor1])
         visited = set()
+        visited.add(actor1)
 
         while queue:
             curr_path = queue.popleft()
             curr_node = curr_path[-1]
+            # print("Currently checking " + curr_node)
 
             if curr_node == actor2:
                 return curr_path
 
             for adjacent in self.get_adjacent_nodes(curr_node):
+                # print(adjacent)
                 if adjacent not in visited:
                     visited.add(adjacent)
                     queue.append(curr_path + [adjacent])
 
         return []
 
-
-    def movie_path(self, actor_path: list[str]) -> list[str]:
-        """
-        Given a path between two actors, return a list of movies such that for every two consecutive actors in the
-        the path, the returned list has a movie between them. This is due to two actors possibly playing in more than
-        one movie together.
-
-        This means the length of the returned list is one less than the length of the given path.
-
-        Preconditions:
-            - actor_path is a valid path
-        """
-        final_movie_path = []
-
-        for i in range(len(actor_path) - 1):
-            actor1 = actor_path[i]
-            actor2 = actor_path[i+1]
-
-            actor1_movies = self.get_adjacent_nodes(actor1)
-            actor2_movies = self.get_adjacent_nodes(actor2)
-
-            for movie in actor1_movies:
-                if movie in actor2_movies:
-                    final_movie_path.append(movie)
-                    break
-
-        return final_movie_path
+    # def movie_path(self, actor_path: list[str]) -> list[str]:
+    #     """
+    #     Given a path between two actors, return a list of movies such that for every two consecutive actors in the
+    #     the path, the returned list has a movie between them. This is due to two actors possibly playing in more than
+    #     one movie together.
+    #
+    #     This means the length of the returned list is one less than the length of the given path.
+    #
+    #     Preconditions:
+    #         - actor_path is a valid path
+    #     """
+    #     final_movie_path = []
+    #
+    #     for i in range(len(actor_path) - 1):
+    #         actor1 = actor_path[i]
+    #         actor2 = actor_path[i+1]
+    #
+    #         actor1_movies = self.get_adjacent_nodes(actor1)
+    #         actor2_movies = self.get_adjacent_nodes(actor2)
+    #
+    #         for movie in actor1_movies:
+    #             if movie in actor2_movies:
+    #                 final_movie_path.append(movie)
+    #                 break
+    #
+    #     return final_movie_path
 
     def output_graph(self, actors: list[str], movies: list[str]) -> None:
         """
