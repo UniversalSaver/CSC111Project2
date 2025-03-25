@@ -180,6 +180,9 @@ class ShortestActorGraph(ActorGraph):
         # >>> a = ShortestActorGraph('data_files/actors_and_movies.db')
         # >>> a.shortest_path('nm0000206', 'nm0000138')
         """
+        if actor1 == actor2:
+            return [actor1]
+
         queue = deque()
         queue.append([actor1])
         visited = set()
@@ -190,11 +193,16 @@ class ShortestActorGraph(ActorGraph):
             curr_node = curr_path[-1]
             # print("Currently checking " + curr_node)
 
-            if curr_node == actor2:
-                return curr_path
+            # if curr_node == actor2:
+                # return curr_path
 
             for adjacent in self.get_adjacent_nodes(curr_node):
                 # print(adjacent)
+
+                # Check for end-point
+                if adjacent == actor2:
+                    return curr_path + [adjacent]
+                
                 if adjacent not in visited:
                     visited.add(adjacent)
                     queue.append(curr_path + [adjacent])
