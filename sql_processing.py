@@ -11,6 +11,7 @@ from collections import deque
 ID_TO_ACTOR = 'data_files/name.basics.tsv'
 ID_TO_MOVIE = 'data_files/title.basics.tsv'
 MOVIE_TO_ACTOR = 'data_files/title.principals.tsv'
+RATINGS = 'data_files/title.ratings.tsv'
 
 DATABASE_NAME = 'data_files/actors_and_movies.db'
 
@@ -27,7 +28,8 @@ class FileFormatError(Exception):
         return "The file attempted to be read is not in the correct format"
 
 
-def create_database(id_to_actor: str, id_to_movie: str, movie_to_actor: str, ratings: str, database_name: str) -> bool:
+def create_database(id_to_actor: str, id_to_movie: str, movie_to_actor: str, ratings: str, database_name: str,
+                    create_weights: bool) -> bool:
     """
     Creates a new file with the path 'DATABASE_NAME' and creates the necessary tables and such to act as a graph
 
@@ -45,11 +47,16 @@ def create_database(id_to_actor: str, id_to_movie: str, movie_to_actor: str, rat
         movie_to_actor = MOVIE_TO_ACTOR
     if database_name == '':
         database_name = DATABASE_NAME
+    if ratings == '':
+        ratings = RATINGS
 
     if os.path.exists(database_name):
         return False
 
     db = sql.connect(database_name)
+
+    db.execute("""PRAGMA journal_mode = OFF""")
+    db.commit()
 
     cur = db.cursor()
 
@@ -70,6 +77,9 @@ def create_database(id_to_actor: str, id_to_movie: str, movie_to_actor: str, rat
                 rating,
                 votes
     )""")
+    cur.execute("""CREATE UNIQUE INDEX idx_actor_id ON actor(id)""")
+    cur.execute("""CREATE UNIQUE INDEX idx_movie_id ON movie(id)""")
+    cur.execute("""CREATE INDEX idx_edge ON edge(movie_id, actor_id)""")
 
     with open(id_to_actor) as file:
         reader = csv.reader(file, delimiter='\t')
@@ -78,14 +88,14 @@ def create_database(id_to_actor: str, id_to_movie: str, movie_to_actor: str, rat
                                 'knownForTitles']:
             raise FileFormatError
 
+        mass_insert_list = []
+
         for line in reader:
             # print(line)
             if 'actor' in line[4] or 'actress' in line[4]:
                 # print(f'"{line[0]}", "{line[1]}"')
-                cur.execute("""
-                    INSERT OR IGNORE INTO actor VALUES
-                        (?, ?)
-                """, (line[0], line[1]))
+                mass_insert_list.append((line[0], line[1]))
+        cur.executemany("""INSERT OR IGNORE INTO actor VALUES (?, ?)""", mass_insert_list)
         db.commit()
 
     with open(id_to_movie) as file:
@@ -95,13 +105,16 @@ def create_database(id_to_actor: str, id_to_movie: str, movie_to_actor: str, rat
                                 'endYear', 'runtimeMinutes', 'genres']:
             raise FileFormatError
 
+        mass_insert_list = []
+
         for line in reader:
             if 'movie' == line[1]:
                 # print(line)
-                cur.execute("""
+                mass_insert_list.append((line[0], line[2]))
+        cur.executemany("""
                     INSERT INTO movie VALUES
                         (?, ?)
-                """, (line[0], line[2]))
+                """, mass_insert_list)
         db.commit()
 
     with open(movie_to_actor) as file:
@@ -110,13 +123,15 @@ def create_database(id_to_actor: str, id_to_movie: str, movie_to_actor: str, rat
         if not next(reader) == ['tconst', 'ordering', 'nconst', 'category', 'job', 'characters']:
             raise FileFormatError
 
+        mass_insert_list = []
         for line in reader:
             if line[3] == 'actor' or line[3] == 'actress':
                 # print(line[0])
-                cur.execute("""
-                    INSERT INTO edge VALUES
-                        (?, ?, NULL)
-                """, (line[0], line[2]))
+                mass_insert_list.append((line[0], line[2]))
+        cur.executemany("""
+            INSERT INTO edge VALUES
+                (?, ?, NULL)
+        """, mass_insert_list)
         db.commit()
 
     with open(ratings) as file:
@@ -125,17 +140,31 @@ def create_database(id_to_actor: str, id_to_movie: str, movie_to_actor: str, rat
         if not next(reader) == ['tconst', 'averageRating', 'numVotes']:
             raise FileFormatError
 
+        mass_insert_list = []
+
         for line in reader:
-            cur.execute("""
-                INSERT INTO rating VALUES
-                    (?, ?, ?)
-            """, (line[0], line[1], line[2]))
+            mass_insert_list.append((line[0], line[1], line[2]))
+        cur.executemany("""
+            INSERT INTO rating VALUES
+                (?, ?, ?)
+        """, mass_insert_list)
         db.commit()
 
+        if not create_weights:
+            cur.close()
+            db.close()
+            return True
+
 # Process the edge weights based on distance from the most popular movie in the database
-    most_popular_movie = cur.execute("""
+    most_popular_movies = cur.execute("""
                         SELECT id FROM rating ORDER BY votes
-                        """).fetchone()[0]
+                        """).fetchall()
+
+    most_popular_movie = most_popular_movies[0]
+
+    for movie in most_popular_movies:
+        if cur.execute("""SELECT * FROM movie WHERE id = ?""", (movie[0],)).fetchone() is not None:
+            most_popular_movie = movie[0]
 
     queue = deque()
     queue.append((most_popular_movie, 0))
@@ -146,7 +175,7 @@ def create_database(id_to_actor: str, id_to_movie: str, movie_to_actor: str, rat
         curr_path = queue.popleft()
         curr_node = curr_path[0]
         curr_distance = curr_path[1]
-        # print("Currently checking " + curr_node + " with a distance of " + str(curr_distance))
+        print("Currently checking " + curr_node + " with a distance of " + str(curr_distance))
 
         if curr_node[0:2] == 'tt':
             actors = cur.execute("""
@@ -165,28 +194,28 @@ def create_database(id_to_actor: str, id_to_movie: str, movie_to_actor: str, rat
             # Unpacks the list of tuples
             adjacent_nodes = {movie[0] for movie in movies}
 
+        mass_insert_list = []
+
         for adjacent in adjacent_nodes:
             # print(adjacent)
             if adjacent not in visited:
                 if curr_node[0:2] == 'tt':
-                    cur.execute("""
-                            UPDATE edge
-                            SET distance_from_popular = ?
-                            WHERE movie_id = ? AND actor_id = ?
-                            """, (curr_distance, curr_node, adjacent))
+                    mass_insert_list.append((curr_distance, curr_node, adjacent))
                 else:
-                    cur.execute("""
-                            UPDATE edge
-                            SET distance_from_popular = ?
-                            WHERE movie_id = ? AND actor_id = ?
-                    """, (curr_distance, adjacent, curr_node))
-                db.commit()
+                    mass_insert_list.append((curr_distance, adjacent, curr_node))
                 visited.add(adjacent)
                 queue.append((adjacent, curr_distance + 1))
+        cur.executemany("""
+                UPDATE edge
+                SET distance_from_popular = ?
+                WHERE movie_id = ? AND actor_id = ?
+        """, mass_insert_list)
+        db.commit()
 
     cur.close()
     db.close()
     return True
+
 
 if __name__ == '__main__':
     actor_id_to_name_file = input("What will your source of actor IDs to names be? ")
@@ -194,9 +223,17 @@ if __name__ == '__main__':
     actor_played_in_file = input("What will your source of actor to movie relations be? ")
     ratings_file = input("What will your source of movie ratings be? ")
     name_of_database = input("What would you like the database to be stored into? ")
+    create_weights = input("Would you like to create edge weights? (Y/N) ").lower().strip()
+
+    if create_weights == 'y':
+        create_weights = True
+    elif create_weights == 'n':
+        create_weights = False
+    else:
+        raise IOError
 
     if not create_database(actor_id_to_name_file, movie_id_to_name_file,
-                           actor_played_in_file, ratings_file, name_of_database):
+                           actor_played_in_file, ratings_file, name_of_database, create_weights):
         print("That database already existed, will not create a new database")
     else:
         print("Have created a new data base in " + name_of_database + ".")
