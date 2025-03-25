@@ -6,6 +6,7 @@ This is created because the raw graph takes upwards of 15 GB of RAM to use, and 
 import sqlite3 as sql
 import csv
 import os
+from collections import deque
 
 ID_TO_ACTOR = 'data_files/name.basics.tsv'
 ID_TO_MOVIE = 'data_files/title.basics.tsv'
@@ -131,10 +132,61 @@ def create_database(id_to_actor: str, id_to_movie: str, movie_to_actor: str, rat
             """, (line[0], line[1], line[2]))
         db.commit()
 
+# Process the edge weights based on distance from the most popular movie in the database
+    most_popular_movie = cur.execute("""
+                        SELECT id FROM rating ORDER BY votes
+                        """).fetchone()[0]
+
+    queue = deque()
+    queue.append((most_popular_movie, 0))
+    visited = set()
+    visited.add(most_popular_movie)
+
+    while queue:
+        curr_path = queue.popleft()
+        curr_node = curr_path[0]
+        curr_distance = curr_path[1]
+        # print("Currently checking " + curr_node + " with a distance of " + str(curr_distance))
+
+        if curr_node[0:2] == 'tt':
+            actors = cur.execute("""
+            SELECT actor_id FROM edge WHERE
+            movie_id = ?
+            """, (curr_node,)).fetchall()
+
+            # Unpacks the list of tuples
+            adjacent_nodes = {actor[0] for actor in actors}
+        else:
+            movies = cur.execute("""
+            SELECT movie_id FROM edge WHERE
+            actor_id = ?
+            """, (curr_node,)).fetchall()
+
+            # Unpacks the list of tuples
+            adjacent_nodes = {movie[0] for movie in movies}
+
+        for adjacent in adjacent_nodes:
+            # print(adjacent)
+            if adjacent not in visited:
+                if curr_node[0:2] == 'tt':
+                    cur.execute("""
+                            UPDATE edge
+                            SET distance_from_popular = ?
+                            WHERE movie_id = ? AND actor_id = ?
+                            """, (curr_distance, curr_node, adjacent))
+                else:
+                    cur.execute("""
+                            UPDATE edge
+                            SET distance_from_popular = ?
+                            WHERE movie_id = ? AND actor_id = ?
+                    """, (curr_distance, adjacent, curr_node))
+                db.commit()
+                visited.add(adjacent)
+                queue.append((adjacent, curr_distance + 1))
+
     cur.close()
     db.close()
     return True
-
 
 if __name__ == '__main__':
     actor_id_to_name_file = input("What will your source of actor IDs to names be? ")
