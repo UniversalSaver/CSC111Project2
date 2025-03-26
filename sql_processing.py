@@ -28,8 +28,7 @@ class FileFormatError(Exception):
         return "The file attempted to be read is not in the correct format"
 
 
-def create_database(id_to_actor: str, id_to_movie: str, movie_to_actor: str, ratings: str, database_name: str,
-                    create_weights: bool) -> bool:
+def create_database(id_to_actor: str, id_to_movie: str, movie_to_actor: str, ratings: str, database_name: str) -> bool:
     """
     Creates a new file with the path 'DATABASE_NAME' and creates the necessary tables and such to act as a graph
 
@@ -69,7 +68,6 @@ def create_database(id_to_actor: str, id_to_movie: str, movie_to_actor: str, rat
     cur.execute("""CREATE TABLE edge(
                 movie_id,
                 actor_id,
-                distance_from_popular,
                 FOREIGN KEY(movie_id) REFERENCES movie(id),
                 FOREIGN KEY(actor_id) REFERENCES actor(id))""")
     cur.execute("""CREATE TABLE rating(
@@ -130,7 +128,7 @@ def create_database(id_to_actor: str, id_to_movie: str, movie_to_actor: str, rat
                 mass_insert_list.append((line[0], line[2]))
         cur.executemany("""
             INSERT INTO edge VALUES
-                (?, ?, NULL)
+                (?, ?)
         """, mass_insert_list)
         db.commit()
 
@@ -147,68 +145,6 @@ def create_database(id_to_actor: str, id_to_movie: str, movie_to_actor: str, rat
         cur.executemany("""
             INSERT INTO rating VALUES
                 (?, ?, ?)
-        """, mass_insert_list)
-        db.commit()
-
-        if not create_weights:
-            cur.close()
-            db.close()
-            return True
-
-# Process the edge weights based on distance from the most popular movie in the database
-    most_popular_movies = cur.execute("""
-                        SELECT id FROM rating ORDER BY votes
-                        """).fetchall()
-
-    most_popular_movie = most_popular_movies[0]
-
-    for movie in most_popular_movies:
-        if cur.execute("""SELECT * FROM movie WHERE id = ?""", (movie[0],)).fetchone() is not None:
-            most_popular_movie = movie[0]
-
-    queue = deque()
-    queue.append((most_popular_movie, 0))
-    visited = set()
-    visited.add(most_popular_movie)
-
-    while queue:
-        curr_path = queue.popleft()
-        curr_node = curr_path[0]
-        curr_distance = curr_path[1]
-        print("Currently checking " + curr_node + " with a distance of " + str(curr_distance))
-
-        if curr_node[0:2] == 'tt':
-            actors = cur.execute("""
-            SELECT actor_id FROM edge WHERE
-            movie_id = ?
-            """, (curr_node,)).fetchall()
-
-            # Unpacks the list of tuples
-            adjacent_nodes = {actor[0] for actor in actors}
-        else:
-            movies = cur.execute("""
-            SELECT movie_id FROM edge WHERE
-            actor_id = ?
-            """, (curr_node,)).fetchall()
-
-            # Unpacks the list of tuples
-            adjacent_nodes = {movie[0] for movie in movies}
-
-        mass_insert_list = []
-
-        for adjacent in adjacent_nodes:
-            # print(adjacent)
-            if adjacent not in visited:
-                if curr_node[0:2] == 'tt':
-                    mass_insert_list.append((curr_distance, curr_node, adjacent))
-                else:
-                    mass_insert_list.append((curr_distance, adjacent, curr_node))
-                visited.add(adjacent)
-                queue.append((adjacent, curr_distance + 1))
-        cur.executemany("""
-                UPDATE edge
-                SET distance_from_popular = ?
-                WHERE movie_id = ? AND actor_id = ?
         """, mass_insert_list)
         db.commit()
 

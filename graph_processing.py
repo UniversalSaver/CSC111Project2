@@ -6,10 +6,16 @@ The file where functions for processing the data will be.
 import networkx as nx
 import sqlite3 as sql
 from collections import deque
+import matplotlib.pyplot as plt
+# import matplotlib
+# matplotlib.use('TkAgg', force=True)
 
 ID_TO_ACTOR = 'data_files/name.basics.tsv'
 ID_TO_MOVIE = 'data_files/title.basics.tsv'
 MOVIE_TO_ACTOR = 'data_files/title.principals.tsv'
+
+# The number of nodes to add to each node in a path for context
+RANDOM_NODE_COUNT = 3
 
 
 class FileFormatError(Exception):
@@ -48,17 +54,88 @@ class ActorGraph:
         """
         self._db_path = database_path
 
-    def shortest_path(self, actor1: str, actor2: str) -> list[str]:
+    def get_path(self, actor1: str, actor2: str) -> list[str]:
         """
         Given two actors, return the shortest path between the actors
         """
         raise NotImplementedError
 
-    def output_graph(self, actors: list[str], movies: list[str]):
+    def _make_networkx_graph(self, path: list[str]) -> nx.Graph:
+        """
+        Given a path, creates a NetworkX graph using the nodes in the path. Also includes nodes branching from the path
+        for visual comparison
+
+        Preconditions:
+            - path is a valid path in the database
+        """
+        nx_graph = nx.Graph()
+
+        for node_index in range(len(path) - 1):
+            current_node_name = self.get_name(path[node_index])
+            adjacent_nodes = self.get_adjacent_nodes(path[node_index])
+
+            adjacent_nodes.remove(path[node_index + 1])
+
+            if path[node_index][0:2] == 'tt':
+                nx_graph.add_node(current_node_name, kind='movie')
+            else:
+                nx_graph.add_node(current_node_name, kind='actor')
+            nx_graph.add_edge(current_node_name, self.get_name(path[node_index + 1]))
+
+            nodes_to_add = RANDOM_NODE_COUNT
+
+            while nodes_to_add > 0 and len(adjacent_nodes) > 0:
+                connected_node_id = adjacent_nodes.pop()
+                connected_node_name = self.get_name(connected_node_id)
+                if connected_node_id[0:2] == 'tt':
+                    nx_graph.add_node(connected_node_name, kind='movie')
+                else:
+                    nx_graph.add_node(connected_node_name, kind='actor')
+                nx_graph.add_edge(current_node_name, connected_node_name)
+                nodes_to_add -= 1
+
+        nx_graph.add_node(self.get_name(path[-1]), kind='actor')
+        return nx_graph
+
+    def output_graph(self, path: list[str]):
         """
         Creates a new window with a graph induced by the given actors and movies.
+
+        Preconditions:
+            - path is a valid path, and any two adjacent elements in the list are connected
+            - path is a list of ids of actors and movies
+
+        >>> s = ShortestActorGraph('small_data_files/small_db.db')
+        >>> p = s.get_path(s.get_actor_id('Keanu Reeves'), s.get_actor_id('Cillian Murphy'))
+        >>> s.output_graph(p)
         """
-        raise NotImplementedError
+        nx_graph = self._make_networkx_graph(path)
+
+        kinds = [nx_graph.nodes[k]['kind'] for k in nx_graph.nodes]
+
+        colours = ['salmon' if kind == 'movie' else 'bisque' for kind in kinds]
+
+        nx.draw_networkx(nx_graph, node_color=colours)
+        plt.show()
+
+    def get_name(self, id: str) -> str:
+        """
+        Given an id (Whether movie or actor) return a title or actor.
+
+        Preconditions:
+            - id is a valid actor or movie id
+        """
+        connection = sql.connect(self._db_path)
+        cursor = connection.cursor()
+
+        if id[0:2] == 'tt':
+            name = cursor.execute("""SELECT title FROM movie WHERE id = ?""", (id,)).fetchone()[0]
+        else:
+            name = cursor.execute("""SELECT name FROM actor WHERE id = ?""", (id,)).fetchone()[0]
+        cursor.close()
+        connection.close()
+
+        return name
 
     def get_actor_id(self, actor_name: str, played_in: str = '') -> str:
         """
@@ -165,7 +242,7 @@ class ShortestActorGraph(ActorGraph):
         """
         super().__init__(database_path)
 
-    def shortest_path(self, actor1: str, actor2: str) -> list[str]:
+    def get_path(self, actor1: str, actor2: str) -> list[str]:
         """
         Given two actor IDs, return the shortest path between two actors as a sequences of actors
 
@@ -175,7 +252,7 @@ class ShortestActorGraph(ActorGraph):
             - The actors are in the graph
 
         >>> s = ShortestActorGraph('small_data_files/small_db.db')
-        >>> s.shortest_path('nm0000206', 'nm0000138') != []
+        >>> s.get_path('nm0000206', 'nm0000138') != []
         True
         # >>> a = ShortestActorGraph('data_files/actors_and_movies.db')
         # >>> a.shortest_path('nm0000206', 'nm0000138')
@@ -202,7 +279,7 @@ class ShortestActorGraph(ActorGraph):
                 # Check for end-point
                 if adjacent == actor2:
                     return curr_path + [adjacent]
-                
+
                 if adjacent not in visited:
                     visited.add(adjacent)
                     queue.append(curr_path + [adjacent])
@@ -236,14 +313,6 @@ class ShortestActorGraph(ActorGraph):
     #
     #     return final_movie_path
 
-    def output_graph(self, actors: list[str], movies: list[str]) -> None:
-        """
-        Creates a new window with an induced subgraph depending on the given actors and edges.
-
-        TODO - Decide what this should take in and what Preconditions those things should have
-        """
-        # TODO
-
 
 class WeightedActorGraph(ActorGraph):
     """
@@ -261,11 +330,11 @@ class WeightedActorGraph(ActorGraph):
     _actor_graph: nx.MultiGraph
     _popular_movie: str
 
-    def __init__(self) -> None:
+    def __init__(self, db_path: str) -> None:
         """
-        Process the data from the constants and create a
+        Creates a relation to the database with a path
         """
-        # TODO
+        super().__init__(db_path)
 
     def shortest_path(self, actor1: str, actor2: str) -> list[str]:
         """
@@ -274,9 +343,8 @@ class WeightedActorGraph(ActorGraph):
         """
         # TODO
 
-    def output_graph(self, actors: list[str], movies: list[str]):
-        """
-        Will create a new window with a graph induced by the given actors and movies, color-coding them to show which is
-        which.
-        """
-        # TODO
+
+if __name__ == '__main__':
+    s = ShortestActorGraph('small_data_files/small_db.db')
+    p = s.get_path(s.get_actor_id('Keanu Reeves'), s.get_actor_id('Cillian Murphy'))
+    s.output_graph(p)
