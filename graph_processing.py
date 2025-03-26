@@ -7,8 +7,6 @@ import networkx as nx
 import sqlite3 as sql
 from collections import deque
 import matplotlib.pyplot as plt
-# import matplotlib
-# matplotlib.use('TkAgg', force=True)
 
 ID_TO_ACTOR = 'data_files/name.basics.tsv'
 ID_TO_MOVIE = 'data_files/title.basics.tsv'
@@ -77,9 +75,9 @@ class ActorGraph:
             adjacent_nodes.remove(path[node_index + 1])
 
             if path[node_index][0:2] == 'tt':
-                nx_graph.add_node(current_node_name, kind='movie')
+                nx_graph.add_node(current_node_name, color='salmon')
             else:
-                nx_graph.add_node(current_node_name, kind='actor')
+                nx_graph.add_node(current_node_name, color='bisque')
             nx_graph.add_edge(current_node_name, self.get_name(path[node_index + 1]))
 
             nodes_to_add = RANDOM_NODE_COUNT
@@ -88,13 +86,14 @@ class ActorGraph:
                 connected_node_id = adjacent_nodes.pop()
                 connected_node_name = self.get_name(connected_node_id)
                 if connected_node_id[0:2] == 'tt':
-                    nx_graph.add_node(connected_node_name, kind='movie')
+                    nx_graph.add_node(connected_node_name, color='salmon')
                 else:
-                    nx_graph.add_node(connected_node_name, kind='actor')
+                    nx_graph.add_node(connected_node_name, color='bisque')
                 nx_graph.add_edge(current_node_name, connected_node_name)
                 nodes_to_add -= 1
 
-        nx_graph.add_node(self.get_name(path[-1]), kind='actor')
+        nx_graph.nodes[self.get_name(path[0])]['color'] = 'green'
+        nx_graph.add_node(self.get_name(path[-1]), color='green')
         return nx_graph
 
     def output_graph(self, path: list[str]):
@@ -111,12 +110,10 @@ class ActorGraph:
         """
         nx_graph = self._make_networkx_graph(path)
 
-        kinds = [nx_graph.nodes[k]['kind'] for k in nx_graph.nodes]
-
-        colours = ['salmon' if kind == 'movie' else 'bisque' for kind in kinds]
+        colours = [nx_graph.nodes[k]['color'] for k in nx_graph.nodes]
 
         nx.draw_networkx(nx_graph, node_color=colours)
-        plt.show()
+        # plt.savefig('img.png')
 
     def get_name(self, id: str) -> str:
         """
