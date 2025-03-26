@@ -6,7 +6,6 @@ This is created because the raw graph takes upwards of 15 GB of RAM to use, and 
 import sqlite3 as sql
 import csv
 import os
-from collections import deque
 
 ID_TO_ACTOR = 'data_files/name.basics.tsv'
 ID_TO_MOVIE = 'data_files/title.basics.tsv'
@@ -21,7 +20,7 @@ class FileFormatError(Exception):
     An error raised during file reading if the format of the file is incorrect
     """
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Return a string representation of this exception
         """
@@ -30,7 +29,9 @@ class FileFormatError(Exception):
 
 def create_database(id_to_actor: str, id_to_movie: str, movie_to_actor: str, ratings: str, database_name: str) -> bool:
     """
-    Creates a new file with the path 'DATABASE_NAME' and creates the necessary tables and such to act as a graph
+    Creates a new file with the path database_name and creates the necessary tables and such to act as a graph
+
+    If empty strings are given, then the parameters default to the constants above
 
     If a database with that name already exists, then delete it, then recreate. This is to ensure the database has
     precisely the wanted data.
@@ -154,6 +155,16 @@ def create_database(id_to_actor: str, id_to_movie: str, movie_to_actor: str, rat
 
 
 if __name__ == '__main__':
+    import python_ta
+
+    python_ta.check_all(config={
+        'max-line-length': 120,
+        'disable': ['E1136'],
+        'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot', 'os'],
+        'allowed-io': ['create_database'],
+        'max-nested-blocks': 4
+    })
+
     actor_id_to_name_file = input("What will your source of actor IDs to names be? ")
     movie_id_to_name_file = input("What will your source of movie IDs to titles be? ")
     actor_played_in_file = input("What will your source of actor to movie relations be? ")

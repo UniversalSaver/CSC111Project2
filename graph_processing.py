@@ -58,10 +58,13 @@ class ActorGraph:
         """
         raise NotImplementedError
 
-    def _make_networkx_graph(self, path: list[str]) -> nx.Graph:
+    def make_networkx_graph(self, path: list[str]) -> nx.Graph:
         """
         Given a path, creates a NetworkX graph using the nodes in the path. Also includes nodes branching from the path
-        for visual comparison
+        for visual comparison.
+
+        These nodes have attributes for the colours of the nodes. Check now deprecated output_graph for how that is
+        expected to work
 
         Preconditions:
             - path is a valid path in the database
@@ -96,24 +99,27 @@ class ActorGraph:
         nx_graph.add_node(self.get_name(path[-1]), color='green')
         return nx_graph
 
-    def output_graph(self, path: list[str]):
-        """
-        Creates a new window with a graph induced by the given actors and movies.
-
-        Preconditions:
-            - path is a valid path, and any two adjacent elements in the list are connected
-            - path is a list of ids of actors and movies
-
-        >>> s = ShortestActorGraph('small_data_files/small_db.db')
-        >>> p = s.get_path(s.get_actor_id('Keanu Reeves'), s.get_actor_id('Cillian Murphy'))
-        >>> s.output_graph(p)
-        """
-        nx_graph = self._make_networkx_graph(path)
-
-        colours = [nx_graph.nodes[k]['color'] for k in nx_graph.nodes]
-
-        nx.draw_networkx(nx_graph, node_color=colours)
-        # plt.savefig('img.png')
+    # def output_graph(self, path: list[str]):
+    #     """
+    #     Creates a new window with a graph induced by the given actors and movies.
+    #
+    #     Returns a tuple with the following information:
+    #         - Whether a path was found
+    #
+    #     Preconditions:
+    #         - path is a valid path, and any two adjacent elements in the list are connected
+    #         - path is a list of ids of actors and movies
+    #
+    #     >>> s = ShortestActorGraph('small_data_files/small_db.db')
+    #     >>> p = s.get_path(s.get_actor_id('Keanu Reeves'), s.get_actor_id('Cillian Murphy'))
+    #     >>> s.output_graph(p)
+    #     """
+    #     nx_graph = self._make_networkx_graph(path)
+    #
+    #     colours = [nx_graph.nodes[k]['color'] for k in nx_graph.nodes]
+    #
+    #     nx.draw_networkx(nx_graph, node_color=colours)
+    #     # plt.savefig('img.png')
 
     def get_name(self, id: str) -> str:
         """
@@ -265,15 +271,8 @@ class ShortestActorGraph(ActorGraph):
         while queue:
             curr_path = queue.popleft()
             curr_node = curr_path[-1]
-            # print("Currently checking " + curr_node)
-
-            # if curr_node == actor2:
-                # return curr_path
 
             for adjacent in self.get_adjacent_nodes(curr_node):
-                # print(adjacent)
-
-                # Check for end-point
                 if adjacent == actor2:
                     return curr_path + [adjacent]
 
@@ -342,6 +341,16 @@ class WeightedActorGraph(ActorGraph):
 
 
 if __name__ == '__main__':
-    s = ShortestActorGraph('small_data_files/small_db.db')
-    p = s.get_path(s.get_actor_id('Keanu Reeves'), s.get_actor_id('Cillian Murphy'))
-    s.output_graph(p)
+    import python_ta
+
+    python_ta.check_all(config={
+        'max-line-length': 120,
+        'disable': ['E1136'],
+        'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot'],
+        'allowed-io': ['load_review_graph'],
+        'max-nested-blocks': 4
+    })
+
+    # s = ShortestActorGraph('small_data_files/small_db.db')
+    # p = s.get_path(s.get_actor_id('Keanu Reeves'), s.get_actor_id('Cillian Murphy'))
+    # s.output_graph(p)

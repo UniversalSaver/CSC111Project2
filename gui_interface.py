@@ -164,7 +164,18 @@ def doNothing(name1, name2, searchType):
     time.sleep(0.3)
     return [True, 0, 0]
 
+
 if __name__ == "__main__":
+    import python_ta
+
+    python_ta.check_all(config={
+        'max-line-length': 120,
+        'disable': ['E1136'],
+        'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot'],
+        'allowed-io': ['load_review_graph'],
+        'max-nested-blocks': 4
+    })
+
     app = App()
     app.run()
 
