@@ -9,8 +9,9 @@ from tkinter.font import Font
 from tkinter import Tk, Frame, Label, Button, OptionMenu, Text, StringVar, PhotoImage
 from tkinter import ttk
 import tkinter as tk
-import matplotlib.figure
+import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import time
 
 class App():
     root: Tk
@@ -131,15 +132,17 @@ class App():
             self.statusWindow.delete('1.0', tk.END)
             self.statusWindow.insert(tk.END, "Searching...")
             self.statusWindow.config(state=tk.DISABLED)
+            startTime = time.time()
             info = doNothing(name1, name2, searchType) #TODO this will be the gp function call
             #depends on implementation but probably something like?
+            waitTime = round(time.time() - startTime, 2)
             if info[0]:
                 self.statusWindow.config(state=tk.NORMAL)
                 self.statusWindow.delete('1.0', tk.END)
-                self.statusWindow.insert(tk.END, f"Found {searchType} connection in \n{info[1]} seconds and {info[2]} steps")
+                self.statusWindow.insert(tk.END, f"Found {searchType} connection in \n{waitTime} seconds and {info[2]} steps")
                 self.statusWindow.config(state=tk.DISABLED)
 
-                fig = matplotlib.figure.Figure(figsize=(10, 10), dpi=100) #theoretically this should be screen size agnostic but not sure
+                fig = plt.figure(figsize=(10, 10), dpi=100) #theoretically this should be screen size agnostic but not sure
                 y = [x for x in range(100)]
                 plot = fig.add_subplot(111)
                 plot.plot(y)
@@ -158,7 +161,8 @@ class App():
             self.statusWindow.config(state=tk.DISABLED)
 
 def doNothing(name1, name2, searchType):
-    return [True, 0, 0, 0]
+    time.sleep(0.3)
+    return [True, 0, 0]
 
 if __name__ == "__main__":
     app = App()
