@@ -47,8 +47,9 @@ class App():
         center_x = int(screen_width / 2 - self.dimensions[0] / 2)
         center_y = int(screen_height / 2 - self.dimensions[1] / 2)
         self.root.geometry(f'{self.dimensions[0]}x{self.dimensions[1]}+{center_x}+{center_y}')
-        self.font = Font(family="Comic Sans MS", size=15) #TODO please do not let this be in comic sans
+        self.font = Font(family="Apple Symbols", size=18)  # shouldve been comic sans -T
         self.db_path = path
+        self.names = []
 
         self.init_input(self.root)
         self.init_actor(self.root)
@@ -103,7 +104,7 @@ class App():
         '''
         name1_frame = Frame(field_frame, bd=15)
         name1_label = ttk.Label(name1_frame, font=self.font, text="Starting actor's name: ")
-        self.names[0] = StringVar(self.root)
+        self.names.append(StringVar(self.root))
         name1_input = ttk.Entry(name1_frame, textvariable=self.names[0])
 
         name1_frame.pack(expand=True)
@@ -116,8 +117,8 @@ class App():
         '''
         name2_frame = Frame(field_frame, bd=15)
         name2_label = ttk.Label(name2_frame, font=self.font, text="Ending actor's name: ")
-        self.names[1] = StringVar(self.root)
-        name2_input = ttk.Entry(name2_frame, textvariable=self.names[0])
+        self.names.append(StringVar(self.root))
+        name2_input = ttk.Entry(name2_frame, textvariable=self.names[1])
 
         name2_frame.pack(expand=True)
         name2_label.pack()
@@ -185,16 +186,16 @@ class App():
 
                 self.status_window.config(state=tk.NORMAL)
                 self.status_window.delete('1.0', tk.END)
-                self.status_window.insert(tk.END,
-                                          "Found ", search_type,
-                                          " connection in \n", str(wait_time),
-                                          " seconds and ", str(int((len(path) - 1) / 2)), "degrees of seperation")
+                degrees = int((len(path) - 1) / 2)
+                msg = f"Found {search_type} connection in \n {wait_time} seconds and {degrees} degrees of seperation"
+                self.status_window.insert(tk.END, msg)
                 self.status_window.config(state=tk.DISABLED)
 
-                fig = plt.figure(figsize=(10, 10), dpi=1000)
+                fig = plt.figure(figsize=(10, 10), dpi=100)
                 plot = fig.add_subplot(111)
                 pos = nx.spring_layout(info)
-                nx.draw(info, pos, ax=plot)
+                colours = [info.nodes[k]['color'] for k in info.nodes]
+                nx.draw(info, pos, node_color=colours, ax=plot)
                 canvas = FigureCanvasTkAgg(fig, master=self.actor_window)
                 canvas.draw()
                 canvas.get_tk_widget().pack()
