@@ -92,12 +92,16 @@ class ActorGraph:
                 nx_graph.add_edge(current_node_name, connected_node_name)
                 nodes_to_add -= 1
 
-        nx_graph.nodes[self.get_name(path[0])]['color'] = 'green'
-
         last_node_name = self.get_name(path[-1])
         nodes_to_add = RANDOM_NODE_COUNT
         adjacent_nodes = self.get_adjacent_nodes(path[-1])
-        adjacent_nodes.remove(path[-2])
+
+        if len(path) <= 1:
+            nx_graph.add_node(self.get_name(path[0]), color='green')
+        else:
+            nx_graph.nodes[self.get_name(path[0])]['color'] = 'green'
+
+            adjacent_nodes.remove(path[-2])
 
         while nodes_to_add > 0 and len(adjacent_nodes) > 0:
             connected_node_id = adjacent_nodes.pop()
