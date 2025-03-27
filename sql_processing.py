@@ -180,7 +180,7 @@ def create_movie_table(creation_database_name: str, main_database: str, number_o
 
     movies = main_cursor.execute("""SELECT movie.tconst, primaryTitle, isAdult, startYear, endYear, runtimeMinutes,
             genres FROM movie
-            WHERE titleType = 'movie'""", ).fetchall()
+            WHERE titleType = 'movie' LIMIT ?""", (number_of_movies,)).fetchall()
 
     print(len(movies))
 
