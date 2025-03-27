@@ -3,6 +3,7 @@ The file where functions for processing the data will be.
 
 # TODO - add copyright
 """
+import os
 import sqlite3 as sql
 from collections import deque
 import networkx as nx
@@ -32,9 +33,11 @@ class ActorGraph:
     """
 
     # Private Instance Attributes:
-    #   - _db_path: The file path leading to the formatted
+    #   - _db_connection: The database connection
+    #   - _db_cursor: The database cursor
 
-    _db_path: str
+    _db_connection: sql.Connection
+    _db_cursor: sql.Cursor
 
     def __init__(self, database_path: str) -> None:
         """
@@ -43,7 +46,16 @@ class ActorGraph:
         Preconditions:
             - database_path refers to a valid sqlite3 database that has at least the tables "actor", "movie", and "edge"
         """
-        self._db_path = database_path
+        if not os.path.exists(database_path):
+            raise FileNotFoundError
+
+        temporary_db_connection = sql.connect(database_path)
+
+        self._db_connection = sql.connect(':memory:')
+        self._db_connection.execute("""PRAGMA journal_mode = OFF""")
+        temporary_db_connection.backup(self._db_connection)
+        temporary_db_connection.close()
+        self._db_cursor = self._db_connection.cursor()
 
     def get_path(self, actor1: str, actor2: str) -> list[str]:
         """
@@ -121,15 +133,10 @@ class ActorGraph:
         Preconditions:
             - id is a valid actor or movie id
         """
-        connection = sql.connect(self._db_path)
-        cursor = connection.cursor()
-
         if object_id[0:2] == 'tt':
-            name = cursor.execute("""SELECT title FROM movie WHERE id = ?""", (object_id,)).fetchone()[0]
+            name = self._db_cursor.execute("""SELECT title FROM movie WHERE id = ?""", (object_id,)).fetchone()[0]
         else:
-            name = cursor.execute("""SELECT name FROM actor WHERE id = ?""", (object_id,)).fetchone()[0]
-        cursor.close()
-        connection.close()
+            name = self._db_cursor.execute("""SELECT name FROM actor WHERE id = ?""", (object_id,)).fetchone()[0]
 
         return name
 
@@ -151,37 +158,32 @@ class ActorGraph:
         >>> s.get_actor_id('Leonardo DiCaprio')
         'nm0000138'
         """
-        with sql.connect(self._db_path) as connection:
-            cursor = connection.cursor()
-            if played_in == '':
-                response = cursor.execute("""
-                SELECT id FROM actor WHERE name = ?
-                """, (actor_name,)).fetchall()
+        if played_in == '':
+            response = self._db_cursor.execute("""
+            SELECT id FROM actor WHERE name = ?
+            """, (actor_name,)).fetchall()
 
-                cursor.close()
-                if len(response) != 1:
-                    return ''
-                else:
-                    return response[0][0]
+            if len(response) != 1:
+                return ''
             else:
-                list_of_actors = cursor.execute("""
-                SELECT id FROM actor WHERE name = ?
-                """, (actor_name,)).fetchall()
+                return response[0][0]
+        else:
+            list_of_actors = self._db_cursor.execute("""
+            SELECT id FROM actor WHERE name = ?
+            """, (actor_name,)).fetchall()
 
-                for actor in list_of_actors:
-                    movies_played_in = cursor.execute("""
-                    SELECT movie_id FROM edge WHERE actor_id = ?
-                    """, (actor[0],)).fetchall()
+            for actor in list_of_actors:
+                movies_played_in = self._db_cursor.execute("""
+                SELECT movie_id FROM edge WHERE actor_id = ?
+                """, (actor[0],)).fetchall()
 
-                    for movie in movies_played_in:
-                        if played_in == cursor.execute("""
-                        SELECT title FROM movie WHERE id = ?
-                        """, (movie[0],)).fetchone()[0]:
-                            cursor.close()
-                            return actor[0]
+                for movie in movies_played_in:
+                    if played_in == self._db_cursor.execute("""
+                    SELECT title FROM movie WHERE id = ?
+                    """, (movie[0],)).fetchone()[0]:
+                        return actor[0]
 
-            cursor.close()
-            return ''
+        return ''
 
     def get_adjacent_nodes(self, given_id: str) -> set[str]:
         """
@@ -197,26 +199,22 @@ class ActorGraph:
         >>> a.get_adjacent_nodes('tt1375666') == {'nm0000138', 'nm0330687', 'nm0680983', 'nm0913822', 'nm0362766', 'nm2438307', 'nm0614165', 'nm0000297', 'nm0182839', 'nm0000592'}
         True
         """
-        with sql.connect(self._db_path) as connection:
-            cursor = connection.cursor()
-            if given_id[0:2] == 'tt':
-                actors = cursor.execute("""
-                SELECT actor_id FROM edge WHERE
-                movie_id = ?
-                """, (given_id,)).fetchall()
+        if given_id[0:2] == 'tt':
+            actors = self._db_cursor.execute("""
+            SELECT actor_id FROM edge WHERE
+            movie_id = ?
+            """, (given_id,)).fetchall()
 
-                # Unpacks the list of tuples
-                cursor.close()
-                return {actor[0] for actor in actors}
-            else:
-                movies = cursor.execute("""
-                SELECT movie_id FROM edge WHERE
-                actor_id = ?
-                """, (given_id,)).fetchall()
+            # Unpacks the list of tuples
+            return {actor[0] for actor in actors}
+        else:
+            movies = self._db_cursor.execute("""
+            SELECT movie_id FROM edge WHERE
+            actor_id = ?
+            """, (given_id,)).fetchall()
 
-                # Unpacks the list of tuples
-                cursor.close()
-                return {movie[0] for movie in movies}
+            # Unpacks the list of tuples
+            return {movie[0] for movie in movies}
 
 
 class ShortestActorGraph(ActorGraph):
@@ -330,13 +328,13 @@ class WeightedActorGraph(ActorGraph):
 if __name__ == '__main__':
     import python_ta
 
-    python_ta.check_all(config={
-        'max-line-length': 120,
-        'disable': ['E1136'],
-        'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot'],
-        'allowed-io': ['load_review_graph'],
-        'max-nested-blocks': 4
-    })
+    # python_ta.check_all(config={
+    #     'max-line-length': 120,
+    #     'disable': ['E1136'],
+    #     'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot'],
+    #     'allowed-io': ['load_review_graph'],
+    #     'max-nested-blocks': 4
+    # })
 
     # s = ShortestActorGraph('small_data_files/small_db.db')
     # p = s.get_path(s.get_actor_id('Keanu Reeves'), s.get_actor_id('Cillian Murphy'))

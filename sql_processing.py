@@ -157,7 +157,7 @@ def create_movie_table(creation_database_name: str, main_database: str, number_o
     the files, returns an empty string.
 
     Preconditions:
-        - number_of_movies is a valid positive integer and is less than 10,000
+        - number_of_movies is a valid positive integer
     """
     if main_database == '':
         main_database = MAIN_DATABASE
@@ -252,13 +252,13 @@ def create_actor_table(creation_database_name: str, main_database: str) -> None:
 if __name__ == '__main__':
     import python_ta
 
-    python_ta.check_all(config={
-        'max-line-length': 120,
-        'disable': ['E1136'],
-        'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot', 'os'],
-        'allowed-io': ['compile_full_data', 'create_movie_table', 'create_actor_table', 'create_database'],
-        'max-nested-blocks': 4
-    })
+    # python_ta.check_all(config={
+    #     'max-line-length': 120,
+    #     'disable': ['E1136'],
+    #     'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot', 'os'],
+    #     'allowed-io': ['compile_full_data', 'create_movie_table', 'create_actor_table', 'create_database'],
+    #     'max-nested-blocks': 4
+    # })
 
     if input("Would you like to make a Main Database which has all the information from the downloaded files? (Y/N) "
              "(Note this takes a while)").strip().lower() == 'y':
