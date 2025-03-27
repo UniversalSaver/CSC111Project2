@@ -29,16 +29,23 @@ class FileFormatError(Exception):
         return "The file attempted to be read is not in the correct format"
 
 
-def compile_full_data() -> bool:
+def compile_full_data(main_database: str) -> str:
     """
     Will create a database of ALL the data in necessary files
 
     However this is FAR too big, so we will be working with a smaller database
-    """
-    if os.path.exists(MAIN_DATABASE):
-        return False
 
-    with sql.connect(MAIN_DATABASE) as connection:
+    Returns the name of the database if it successfully created it
+
+    If the database already exists, returns an empty string
+    """
+    if main_database == '':
+        main_database = MAIN_DATABASE
+
+    if os.path.exists(main_database):
+        return ''
+
+    with sql.connect(main_database) as connection:
         cursor = connection.cursor()
 
         with open(ID_TO_ACTOR) as file:
@@ -122,6 +129,7 @@ def compile_full_data() -> bool:
             connection.commit()
 
         cursor.close()
+    return main_database
 
 
 def create_database(database_name: str) -> str:
@@ -169,8 +177,7 @@ def create_movie_table(creation_database_name: str, main_database: str, number_o
     insertion_cursor.execute("""CREATE UNIQUE INDEX idx_movie_id ON movie(id)""")
     insertion_connection.commit()
 
-    movies = main_cursor.execute(
-            """SELECT movie.tconst, primaryTitle, isAdult, startYear, endYear, runtimeMinutes,
+    movies = main_cursor.execute("""SELECT movie.tconst, primaryTitle, isAdult, startYear, endYear, runtimeMinutes,
             genres, averageRating, numVotes FROM movie JOIN ratings ON movie.tconst = ratings.tconst
             WHERE titleType = 'movie' ORDER BY RANDOM() LIMIT ?""", (number_of_movies,)).fetchall()
 
@@ -245,22 +252,27 @@ def create_actor_table(creation_database_name: str, main_database: str) -> None:
 if __name__ == '__main__':
     import python_ta
 
-    # python_ta.check_all(config={
-    #     'max-line-length': 120,
-    #     'disable': ['E1136'],
-    #     'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot', 'os'],
-    #     'allowed-io': ['create_database'],
-    #     'max-nested-blocks': 4
-    # })
+    python_ta.check_all(config={
+        'max-line-length': 120,
+        'disable': ['E1136'],
+        'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot', 'os'],
+        'allowed-io': ['compile_full_data', 'create_movie_table', 'create_actor_table', 'create_database'],
+        'max-nested-blocks': 4
+    })
 
     if input("Would you like to make a Main Database which has all the information from the downloaded files? (Y/N) "
              "(Note this takes a while)").strip().lower() == 'y':
-        if not (os.path.exists(ID_TO_ACTOR) and os.path.exists(ID_TO_MOVIE) and os.path.exists(MOVIE_TO_ACTOR) and
-                os.path.exists(RATINGS)):
+        if not (os.path.exists(ID_TO_ACTOR) and os.path.exists(ID_TO_MOVIE) and os.path.exists(MOVIE_TO_ACTOR)
+                and os.path.exists(RATINGS)):
             print("Please make sure you have name.basics.tsv, title.basics.tsv, title.principals.tsv, title.ratings.tsv"
-                  " in the data_files folder... (Press any button)")
+                  " in the data_files folder...")
         else:
-            compile_full_data()
+            main_database_location = input("Where would you like to store the Main Database? ")
+            main_database_location = compile_full_data(main_database_location)
+            if main_database_location == '':
+                print("It seems you already have a database there. We won't make you wait through making another one!")
+            else:
+                print(f"Made a Main Database at {main_database_location}")
 
     inputted_main_database = input("What would you like to get the data from? ")
     inputted_created_database = input("Where would you like your new database? ")
@@ -278,6 +290,7 @@ if __name__ == '__main__':
             print("Couldn't find the main database, please run the program again and try again")
         else:
             create_actor_table(inputted_created_database, inputted_main_database)
+            print(f"Created a new database for graph traversing at {inputted_created_database}")
 
     # actor_id_to_name_file = input("What will your source of actor IDs to names be? ")
     # movie_id_to_name_file = input("What will your source of movie IDs to titles be? ")
