@@ -12,7 +12,6 @@ MAIN_DATABASE = 'data_files/all_data.db'
 ID_TO_ACTOR = 'data_files/name.basics.tsv'
 ID_TO_MOVIE = 'data_files/title.basics.tsv'
 MOVIE_TO_ACTOR = 'data_files/title.principals.tsv'
-RATINGS = 'data_files/title.ratings.tsv'
 
 DATABASE_NAME = 'data_files/actors_and_movies.db'
 
@@ -109,25 +108,6 @@ def compile_full_data(main_database: str) -> str:
                     """, tuple(line))
             cursor.execute("""CREATE INDEX idx_connections_actor ON connections(nconst)""")
             cursor.execute("""CREATE INDEX idx_connections_movie ON connections(tconst)""")
-            connection.commit()
-
-        with open(RATINGS) as file:
-            reader = csv.reader(file, delimiter='\t')
-
-            header = next(reader)
-
-            cursor.execute(f"""
-                CREATE TABLE ratings(
-                {header[0]} PRIMARY_KEY, {header[1]}, {header[2]}
-                )
-                """)
-
-            for line in reader:
-                cursor.execute("""
-                INSERT INTO ratings VALUES
-                (?, ?, ?)
-                """, tuple(line))
-            cursor.execute("""CREATE INDEX indx_ratings ON ratings(tconst)""")
             connection.commit()
 
         cursor.close()
@@ -299,9 +279,8 @@ if __name__ == '__main__':
 
     if input("Would you like to make a Main Database which has all the information from the downloaded files? (Y/N) "
              "(Note this takes a while) ").strip().lower() == 'y':
-        if not (os.path.exists(ID_TO_ACTOR) and os.path.exists(ID_TO_MOVIE) and os.path.exists(MOVIE_TO_ACTOR)
-                and os.path.exists(RATINGS)):
-            print("Please make sure you have name.basics.tsv, title.basics.tsv, title.principals.tsv, title.ratings.tsv"
+        if not (os.path.exists(ID_TO_ACTOR) and os.path.exists(ID_TO_MOVIE) and os.path.exists(MOVIE_TO_ACTOR)):
+            print("Please make sure you have name.basics.tsv, title.basics.tsv, and title.principals.tsv"
                   " in the data_files folder...")
         else:
             main_database_location = input("Where would you like to store the Main Database? ")

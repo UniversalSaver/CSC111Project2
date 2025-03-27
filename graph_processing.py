@@ -27,9 +27,9 @@ class FileFormatError(Exception):
         return "The file attempted to be read is not in the correct format"
 
 
-class ActorGraph:
+class ShortestActorGraph:
     """
-    An abstract class that defines how the methods for the actual actor graphs should work
+    A class with the graph which will process the functions such as shortest_path or new_bacon
     """
 
     # Private Instance Attributes:
@@ -48,12 +48,6 @@ class ActorGraph:
         if not os.path.exists(database_path):
             raise FileNotFoundError
         self._db_path = database_path
-
-    def get_path(self, actor1: str, actor2: str) -> list[str]:
-        """
-        Given two actors, return the shortest path between the actors
-        """
-        raise NotImplementedError
 
     def make_networkx_graph(self, path: list[str]) -> nx.Graph:
         """
@@ -116,28 +110,6 @@ class ActorGraph:
         nx_graph.add_node(self.get_name(path[-1]), color='green')
         return nx_graph
 
-    # def output_graph(self, path: list[str]):
-    #     """
-    #     Creates a new window with a graph induced by the given actors and movies.
-    #
-    #     Returns a tuple with the following information:
-    #         - Whether a path was found
-    #
-    #     Preconditions:
-    #         - path is a valid path, and any two adjacent elements in the list are connected
-    #         - path is a list of ids of actors and movies
-    #
-    #     >>> s = ShortestActorGraph('small_data_files/small_db.db')
-    #     >>> p = s.get_path(s.get_actor_id('Keanu Reeves'), s.get_actor_id('Cillian Murphy'))
-    #     >>> s.output_graph(p)
-    #     """
-    #     nx_graph = self._make_networkx_graph(path)
-    #
-    #     colours = [nx_graph.nodes[k]['color'] for k in nx_graph.nodes]
-    #
-    #     nx.draw_networkx(nx_graph, node_color=colours)
-    #     # plt.savefig('img.png')
-
     def get_name(self, object_id: str) -> str:
         """
         Given an id (Whether movie or actor) return a title or actor.
@@ -166,12 +138,12 @@ class ActorGraph:
 
         Returns an empty string if the actor doesn't exist, or there are more than one actor that fit the description
 
-        >>> a = ActorGraph('data_files/actors_and_movies.db')
+        >>> a = ShortestActorGraph('data_files/actors_and_movies.db')
         >>> a.get_actor_id('Kevin Bacon')
         ''
         >>> a.get_actor_id('Kevin Bacon', 'Space Oddity')
         'nm0000102'
-        >>> s = ActorGraph('small_data_files/small_db.db')
+        >>> s = ShortestActorGraph('data_files/actors_and_movies.db')
         >>> s.get_actor_id('Leonardo DiCaprio')
         'nm0000138'
         """
@@ -179,8 +151,8 @@ class ActorGraph:
             cursor = connection.cursor()
             if played_in == '':
                 response = cursor.execute("""
-                SELECT id FROM actor WHERE name = ?
-                """, (actor_name,)).fetchall()
+                    SELECT id FROM actor WHERE name = ?
+                    """, (actor_name,)).fetchall()
 
                 cursor.close()
                 if len(response) != 1:
@@ -189,21 +161,21 @@ class ActorGraph:
                     return response[0][0]
             else:
                 played_in = cursor.execute("""
-                        SELECT id FROM movie WHERE title = ?
-                """, (played_in,)).fetchall()
+                            SELECT id FROM movie WHERE title = ?
+                    """, (played_in,)).fetchall()
 
                 if len(played_in) == 0:
                     cursor.close()
                     return ''
 
                 list_of_actors = cursor.execute("""
-                SELECT id FROM actor WHERE name = ?
-                """, (actor_name,)).fetchall()
+                    SELECT id FROM actor WHERE name = ?
+                    """, (actor_name,)).fetchall()
 
                 for actor in list_of_actors:
                     movies_played_in = cursor.execute("""
-                    SELECT connections FROM edge WHERE object_id = ?
-                    """, (actor[0],)).fetchone()
+                        SELECT connections FROM edge WHERE object_id = ?
+                        """, (actor[0],)).fetchone()
 
                     if movies_played_in is None:
                         continue
@@ -225,7 +197,7 @@ class ActorGraph:
         Preconditions:
             - id is a valid actor or movie id
 
-        >>> a = ActorGraph('small_data_files/small_db.db')
+        >>> a = ShortestActorGraph('small_data_files/small_db.db')
         >>> a.get_adjacent_nodes('nm0000138') == {'tt1375666', 'tt0120338'}
         True
         >>> a.get_adjacent_nodes('tt1375666') == {'nm0000138', 'nm0330687', 'nm0680983', 'nm0913822', 'nm0362766', 'nm2438307', 'nm0614165', 'nm0000297', 'nm0182839', 'nm0000592'}
@@ -234,8 +206,8 @@ class ActorGraph:
         with sql.connect(self._db_path) as connection:
             cursor = connection.cursor()
             connected_nodes = cursor.execute("""
-                                SELECT connections FROM edge WHERE object_id = ?
-                        """, (given_id,)).fetchone()
+                                    SELECT connections FROM edge WHERE object_id = ?
+                            """, (given_id,)).fetchone()
 
             cursor.close()
 
@@ -256,31 +228,16 @@ class ActorGraph:
 
             if is_alive == 'alive':
                 return cursor.execute("""
-                        SELECT name FROM actor WHERE deathYear = '\\N'
-                """).fetchall()
+                            SELECT name FROM actor WHERE deathYear = '\\N'
+                    """).fetchall()
             elif is_alive == 'dead':
                 return cursor.execute("""
-                        SELECT name FROM actor WHERE deathYear != '\\N'
-                """).fetchall()
+                            SELECT name FROM actor WHERE deathYear != '\\N'
+                    """).fetchall()
             else:
                 return cursor.execute("""
-                        SELECT name FROM actor
-                """).fetchall()
-
-
-class ShortestActorGraph(ActorGraph):
-    """
-    A class with the graph which will process the functions such as shortest_path or new_bacon
-    """
-
-    def __init__(self, database_path: str) -> None:
-        """
-        Process the data from the constants and create a multigraph with nodes of actors, and edges as movies
-
-        Preconditions:
-            - The constants above refer to valid files
-        """
-        super().__init__(database_path)
+                            SELECT name FROM actor
+                    """).fetchall()
 
     def get_path(self, actor1: str, actor2: str) -> list[str]:
         """
@@ -427,37 +384,6 @@ class ShortestActorGraph(ActorGraph):
     #                 break
     #
     #     return final_movie_path
-
-
-class WeightedActorGraph(ActorGraph):
-    """
-    A class very similar to ActorGraph, except the edges are weighted to funnel towards the most popular movie that is
-    found. This allows for faster path-finding between two actors, but it is not guaranteed to find the shortest path.
-    """
-
-    # Private Instance Attributes:
-    #   - _actor_graph: a graph with actors and movies as vertices. A movie and an actor will have an edge if the actor
-    #                   has played in the movie. There are no edges between actors and no edges between movies. The
-    #                   actors and movies are represented as their IDs. The edges will also have weights, which are how
-    #                   far it is from _popular_movie
-    #   - _popular_movie: A string containing the ID of a popular movie
-
-    _actor_graph: nx.MultiGraph
-    _popular_movie: str
-
-    def __init__(self, db_path: str) -> None:
-        """
-        Creates a relation to the database with a path
-        """
-        super().__init__(db_path)
-
-    def get_path(self, actor1: str, actor2: str) -> list[str]:
-        """
-        Will find the shortest path between actor1 and actor2 by finding a path between the actors and popular_movie.
-        The combined path can then be found and that will be a path between the two actors.
-        """
-        # TODO
-        return []
 
 
 # if __name__ == '__main__':
