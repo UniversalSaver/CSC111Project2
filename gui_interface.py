@@ -6,7 +6,7 @@ to functions in graph_processing.py
 """
 import time
 from tkinter.font import Font
-from tkinter import Tk, Frame, Label, Button, OptionMenu, Text, StringVar, PhotoImage
+from tkinter import Tk, Frame, Label, Button, OptionMenu, Text, StringVar, PhotoImage, Entry
 from tkinter import ttk
 import tkinter as tk
 from matplotlib.figure import Figure
@@ -52,7 +52,7 @@ class App():
         center_x = int(screen_width / 2 - self.dimensions[0] / 2)
         center_y = int(screen_height / 2 - self.dimensions[1] / 2)
         self.root.geometry(f'{self.dimensions[0]}x{self.dimensions[1]}+{center_x}+{center_y}')
-        self.font = Font(family="Apple Symbols", size=18)  # shouldve been comic sans -T
+        self.font = Font(family="Apple Symbols", size=15)  # shouldve been comic sans -T
         self.db_path = path
         self.names = []
 
@@ -72,7 +72,7 @@ class App():
         '''
         Initializes the input frame (left side of the window)
         '''
-        input_frame = Frame(main_frame, bg='blue', bd=15, width=self.dimensions[0] / 3)
+        input_frame = Frame(main_frame, bg="#dee2e6", relief='raised', bd=15, width=self.dimensions[0] / 3)
 
         self.init_info(input_frame)
         self.init_field(input_frame)
@@ -84,10 +84,10 @@ class App():
         '''
         Initializes the info frame (top left side of the window)
         '''
-        info_frame = Frame(input_frame, bg='green', bd=15)
-        title = ttk.Label(info_frame, font=self.font, wraplength=(self.dimensions[0] / 3) - 50, justify=tk.CENTER,
+        info_frame = Frame(input_frame, bg="#adb5bd", bd=15)
+        title = Label(info_frame, font=self.font, bg="#adb5bd", wraplength=(self.dimensions[0] / 3) - 70, justify=tk.CENTER,
                           text="The really cool connected thing TODO NAME")
-        description = ttk.Label(info_frame, font=self.font, wraplength=(self.dimensions[0] / 3) - 50, justify=tk.CENTER,
+        description = Label(info_frame, font=self.font, bg="#adb5bd", wraplength=(self.dimensions[0] / 3) - 70, justify=tk.CENTER,
                                 text="This is a really cool thing that will connect actors to movies. she kevin on my bacon till i 6 degrees or less")
         info_frame.pack(side=tk.TOP, fill=tk.BOTH)
         title.pack(side=tk.TOP)
@@ -97,7 +97,7 @@ class App():
         '''
         Initializes the field frame (bottom left side of the window)
         '''
-        field_frame = Frame(input_frame, bd=15)
+        field_frame = Frame(input_frame, bd=15, bg="#ced4da")
 
         self.init_name1(field_frame)
         self.init_name2(field_frame)
@@ -110,10 +110,10 @@ class App():
         '''
         Initializes the first name input frame
         '''
-        name1_frame = Frame(field_frame, bd=15)
-        name1_label = ttk.Label(name1_frame, font=self.font, text="Starting actor's name: ")
+        name1_frame = Frame(field_frame, bd=15, bg="#ced4da")
+        name1_label = Label(name1_frame, bg="#ced4da", fg="#495057", font=self.font, text="Starting actor's name: ")
         self.names.append(StringVar(self.root))
-        name1_input = ttk.Entry(name1_frame, textvariable=self.names[0])
+        name1_input = Entry(name1_frame, textvariable=self.names[0])
 
         name1_frame.pack(expand=True)
         name1_label.pack()
@@ -123,10 +123,10 @@ class App():
         '''
         Initializes the second name input frame
         '''
-        name2_frame = Frame(field_frame, bd=15)
-        name2_label = ttk.Label(name2_frame, font=self.font, text="Ending actor's name: ")
+        name2_frame = Frame(field_frame, bd=15, bg="#ced4da")
+        name2_label = Label(name2_frame, bg="#ced4da", fg ="#495057", font=self.font, text="Ending actor's name: ")
         self.names.append(StringVar(self.root))
-        name2_input = ttk.Entry(name2_frame, textvariable=self.names[1])
+        name2_input = Entry(name2_frame, textvariable=self.names[1])
 
         name2_frame.pack(expand=True)
         name2_label.pack()
@@ -136,13 +136,14 @@ class App():
         '''
         Initializes the search input frame, including search type and search button
         '''
-        search_frame = Frame(field_frame, bd=15)
-        dropdown_frame = Frame(search_frame, bd=15)
-        search_label = ttk.Label(dropdown_frame, font=self.font, text="Search type: ")
+        search_frame = Frame(field_frame, bd=15, bg="#ced4da")
+        dropdown_frame = Frame(search_frame, bd=15, bg="#ced4da")
+        search_label = Label(dropdown_frame, bg="#ced4da", fg="#495057", font=self.font, text="Search type: ")
         self.type = StringVar(self.root)
         self.type.set("Fast")
         type_box = OptionMenu(dropdown_frame, self.type, "Fast", "Short")
-        search_button = Button(search_frame, command=self.doTheThing, font=self.font, text="Go!")
+        type_box.config(bg="#ced4da", fg="#495057")
+        search_button = Button(search_frame, bg="#ced4da", bd=0, command=self.doTheThing, font=self.font, text="Go!")
 
         search_frame.pack(expand=True)
         dropdown_frame.pack(side=tk.LEFT)
@@ -154,7 +155,7 @@ class App():
         '''
         Initializes the debug frame, for displaying the status of the search
         '''
-        dbg_frame = Frame(field_frame, bd=15)
+        dbg_frame = Frame(field_frame, bg="#adb5bd", bd=15)
         self.status_window = Text(dbg_frame, font=self.font)
         self.status_window.insert(tk.END, "")
         self.status_window.config(state=tk.DISABLED)
@@ -168,7 +169,7 @@ class App():
         '''
         global angryBaby
         angryBaby = PhotoImage(file="angrybaby.png")
-        actor_frame = Frame(main_frame, bg='red')
+        actor_frame = Frame(main_frame, bg="#f8f9fa")
         self.actor_window = Label(actor_frame, image=angryBaby)
         self.actor_window.pack(expand=True)
 
@@ -195,7 +196,7 @@ class App():
                 self.status_window.delete('1.0', tk.END)
                 d = int((len(path) - 1) / 2)
                 p = "s" if d != 1 else ""
-                msg = f"Found {search_type} connection in \n{wait} seconds and {d} degree{p} of seperation"
+                msg = f"Found {search_type} connection in \n{wait} seconds and \n{d} degree{p} of seperation"
                 self.status_window.insert(tk.END, msg)
                 self.status_window.config(state=tk.DISABLED)
                 self.render(info)
@@ -223,7 +224,7 @@ class App():
         plot.axis('off')
         pos = nx.kamada_kawai_layout(info)
         colours = [info.nodes[k]['color'] for k in info.nodes]
-        nx.draw(info, pos, node_color=colours, ax=plot, with_labels=True)
+        nx.draw(info, pos, node_color=colours, ax=plot, with_labels=True, font_size=8)
         x_min, x_max = plot.get_xlim()
         y_min, y_max = plot.get_ylim()
         x_span = x_max - x_min
