@@ -9,6 +9,7 @@ from tkinter.font import Font
 from tkinter import Tk, Frame, Label, Button, OptionMenu, Text, StringVar, PhotoImage
 from tkinter import ttk
 import tkinter as tk
+from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import networkx as nx
@@ -28,6 +29,8 @@ class App():
         status_window: the place in the window that holds the text box (lock/unlock purposes)
         actor_window: the place in the window that holds the actor image
         db_path: the path to the database file
+        canvas: the canvas to draw the graph on (memory purposes)
+        figure: the figure to draw the graph on (memory purposes)
     '''
     root: Tk
     font: Font
@@ -37,6 +40,8 @@ class App():
     status_window: Text
     actor_window: Label
     db_path: str
+    canvas: FigureCanvasTkAgg
+    figure: Figure
 
     def __init__(self, path: str) -> None:
         self.root = Tk()
@@ -53,6 +58,9 @@ class App():
 
         self.init_input(self.root)
         self.init_actor(self.root)
+
+        self.figure = Figure(figsize=(20, 20), dpi=100)
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self.actor_window)
 
     def run(self) -> None:
         '''
@@ -167,8 +175,7 @@ class App():
         actor_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
     def doTheThing(self) -> None:
-        name1 = self.names[0].get()
-        name2 = self.names[1].get()
+        name1, name2 = self.names[0].get(), self.names[1].get()
         search_type = self.type.get()
         self.status_window.config(state=tk.NORMAL)
         self.status_window.delete('1.0', tk.END)
@@ -182,23 +189,16 @@ class App():
             path = g.get_path(id1, id2) #change for connection type?
             if len(path) > 0:
                 info = g.make_networkx_graph(path)
-                wait_time = round(time.time() - start_time, 3)
+                wait = round(time.time() - start_time, 3)
 
                 self.status_window.config(state=tk.NORMAL)
                 self.status_window.delete('1.0', tk.END)
-                degrees = int((len(path) - 1) / 2)
-                msg = f"Found {search_type} connection in \n {wait_time} seconds and {degrees} degrees of seperation"
+                d = int((len(path) - 1) / 2)
+                p = "s" if d != 1 else ""
+                msg = f"Found {search_type} connection in \n{wait} seconds and {d} degree{p} of seperation"
                 self.status_window.insert(tk.END, msg)
                 self.status_window.config(state=tk.DISABLED)
-
-                fig = plt.figure(figsize=(10, 10), dpi=100)
-                plot = fig.add_subplot(111)
-                pos = nx.spring_layout(info)
-                colours = [info.nodes[k]['color'] for k in info.nodes]
-                nx.draw(info, pos, node_color=colours, ax=plot)
-                canvas = FigureCanvasTkAgg(fig, master=self.actor_window)
-                canvas.draw()
-                canvas.get_tk_widget().pack()
+                self.render(info)
             else:
                 self.status_window.config(state=tk.NORMAL)
                 self.status_window.delete('1.0', tk.END)
@@ -210,6 +210,31 @@ class App():
             self.status_window.insert(tk.END,
                                       f"Sorry, actor {name1 if id1 == "" else name2 if id2 == "" else ""} not found")
             self.status_window.config(state=tk.DISABLED)
+
+    def render(self, info: nx.Graph) -> None:
+        '''
+        Renders the graph
+        '''
+        # DO NOT TOUCH ANYTHING IT HAS DRIVEN ME MAD ON THE ROCKS
+        self.canvas.get_tk_widget().pack_forget()
+        plt.close(self.figure)
+        self.figure = Figure(figsize=(20, 20), dpi=100)
+        plot = self.figure.add_axes((0, 0, 1, 1))
+        plot.axis('off')
+        pos = nx.spring_layout(info)
+        colours = [info.nodes[k]['color'] for k in info.nodes]
+        nx.draw(info, pos, node_color=colours, ax=plot, with_labels=True)
+        x_min, x_max = plot.get_xlim()
+        y_min, y_max = plot.get_ylim()
+        x_span = x_max - x_min
+        y_span = y_max - y_min
+        padding = 0.05 * max(x_span, y_span)
+        plot.set_xlim(x_min - padding, x_max + padding)
+        plot.set_ylim(y_min - padding, y_max + padding)
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self.actor_window)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack()
+
 
 
 if __name__ == "__main__":
