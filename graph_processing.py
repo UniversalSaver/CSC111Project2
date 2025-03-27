@@ -3,10 +3,9 @@ The file where functions for processing the data will be.
 
 # TODO - add copyright
 """
-import networkx as nx
 import sqlite3 as sql
 from collections import deque
-import matplotlib.pyplot as plt
+import networkx as nx
 
 ID_TO_ACTOR = 'data_files/name.basics.tsv'
 ID_TO_MOVIE = 'data_files/title.basics.tsv'
@@ -20,7 +19,7 @@ class FileFormatError(Exception):
     """
     An error raised during file reading if the format of the file is incorrect
     """
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Return a string representation of this exception
         """
@@ -33,14 +32,8 @@ class ActorGraph:
     """
 
     # Private Instance Attributes:
-    #   - _actor_graph: A graph representing the actors in some way
-    #   - _actors: A graph mapping actor IDs to the name
-    #   - _movies: A graph mapping movie IDs to the title
-    # TODO: Figure out what from this is necessary now that it's database based
+    #   - _db_path: The file path leading to the formatted
 
-    _actor_graph: nx.Graph
-    _actors: dict[str, str]
-    _movies: dict[str, str]
     _db_path: str
 
     def __init__(self, database_path: str) -> None:
@@ -121,7 +114,7 @@ class ActorGraph:
     #     nx.draw_networkx(nx_graph, node_color=colours)
     #     # plt.savefig('img.png')
 
-    def get_name(self, id: str) -> str:
+    def get_name(self, object_id: str) -> str:
         """
         Given an id (Whether movie or actor) return a title or actor.
 
@@ -131,10 +124,10 @@ class ActorGraph:
         connection = sql.connect(self._db_path)
         cursor = connection.cursor()
 
-        if id[0:2] == 'tt':
-            name = cursor.execute("""SELECT title FROM movie WHERE id = ?""", (id,)).fetchone()[0]
+        if object_id[0:2] == 'tt':
+            name = cursor.execute("""SELECT title FROM movie WHERE id = ?""", (object_id,)).fetchone()[0]
         else:
-            name = cursor.execute("""SELECT name FROM actor WHERE id = ?""", (id,)).fetchone()[0]
+            name = cursor.execute("""SELECT name FROM actor WHERE id = ?""", (object_id,)).fetchone()[0]
         cursor.close()
         connection.close()
 
@@ -230,13 +223,8 @@ class ShortestActorGraph(ActorGraph):
     """
     A class with the graph which will process the functions such as shortest_path or new_bacon
     """
-    # Private Instance Attributes:
-    #   - _actor_graph: A graph with actors as vertices, and movies two people have played in as edges. The actors are
-    #                   represented as their IDs, and the edges have attributes as movie IDs
 
-    _actor_graph: nx.MultiGraph
-
-    def __init__(self, database_path) -> None:
+    def __init__(self, database_path: str) -> None:
         """
         Process the data from the constants and create a multigraph with nodes of actors, and edges as movies
 
@@ -257,8 +245,6 @@ class ShortestActorGraph(ActorGraph):
         >>> s = ShortestActorGraph('small_data_files/small_db.db')
         >>> s.get_path('nm0000206', 'nm0000138') != []
         True
-        # >>> a = ShortestActorGraph('data_files/actors_and_movies.db')
-        # >>> a.shortest_path('nm0000206', 'nm0000138')
         """
         if actor1 == actor2:
             return [actor1]
@@ -332,12 +318,13 @@ class WeightedActorGraph(ActorGraph):
         """
         super().__init__(db_path)
 
-    def shortest_path(self, actor1: str, actor2: str) -> list[str]:
+    def get_path(self, actor1: str, actor2: str) -> list[str]:
         """
         Will find the shortest path between actor1 and actor2 by finding a path between the actors and popular_movie.
         The combined path can then be found and that will be a path between the two actors.
         """
         # TODO
+        return []
 
 
 if __name__ == '__main__':
