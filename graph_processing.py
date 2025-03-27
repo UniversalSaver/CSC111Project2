@@ -3,6 +3,7 @@ The file where functions for processing the data will be.
 
 # TODO - add copyright
 """
+import os
 import sqlite3 as sql
 from collections import deque
 import networkx as nx
@@ -42,7 +43,10 @@ class ActorGraph:
 
         Preconditions:
             - database_path refers to a valid sqlite3 database that has at least the tables "actor", "movie", and "edge"
+                - It will throw an error if this is not true
         """
+        if not os.path.exists(database_path):
+            raise FileNotFoundError
         self._db_path = database_path
 
     def get_path(self, actor1: str, actor2: str) -> list[str]:
@@ -309,7 +313,6 @@ class ShortestActorGraph(ActorGraph):
         visited = set()
         visited.add(actor1)
 
-
         # Initialize SQL connection:
         with sql.connect(self._db_path) as connection:
             cursor = connection.cursor()
@@ -352,8 +355,6 @@ class ShortestActorGraph(ActorGraph):
                             queue.append(curr_path + [adjacent])
 
         return []
-
-
 
     # def movie_path(self, actor_path: list[str]) -> list[str]:
     #     """
