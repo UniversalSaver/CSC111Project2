@@ -10,6 +10,7 @@ from tkinter import Tk, Frame, Label, Button, OptionMenu, Text, StringVar, Photo
 from tkinter import ttk
 import tkinter as tk
 import matplotlib.pyplot as plt
+import networkx as nx
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import time
 
@@ -127,25 +128,34 @@ class App():
         name1 = self.name1.get()
         name2 = self.name2.get()
         searchType = self.type.get()
-        try:
-            self.statusWindow.config(state=tk.NORMAL)
-            self.statusWindow.delete('1.0', tk.END)
-            self.statusWindow.insert(tk.END, "Searching...")
-            self.statusWindow.config(state=tk.DISABLED)
-            startTime = time.time()
-            info = doNothing(name1, name2, searchType) #TODO this will be the gp function call
-            #depends on implementation but probably something like?
-            waitTime = round(time.time() - startTime, 2)
-            if info[0]:
+        self.statusWindow.config(state=tk.NORMAL)
+        self.statusWindow.delete('1.0', tk.END)
+        self.statusWindow.insert(tk.END, "Searching...")
+        self.statusWindow.config(state=tk.DISABLED)
+        g = gp.ShortestActorGraph("./small_data_files/small_db.db") #TODO change up here? and change to big one
+        #TODO something to do with checking the people are ok?
+
+        startTime = time.time()
+        id1, id2 = g.get_actor_id(name1), g.get_actor_id(name2) #TODO check not found
+        if id1 != "" and id2 != "":
+            path = g.get_path(id1, id2) #change for connection type?
+            if len(path) > 0:
+                info = g.make_networkx_graph(path)
+                #info = doNothing(name1, name2, searchType) #TODO this will be the gp function call
+                #depends on implementation but probably something like?
+                '''info = nx.Graph()
+                info.add_edges_from([(1, 2), (1, 3), (2, 3), (3, 4), (4, 5)])'''
+                waitTime = round(time.time() - startTime, 3)
+
                 self.statusWindow.config(state=tk.NORMAL)
                 self.statusWindow.delete('1.0', tk.END)
-                self.statusWindow.insert(tk.END, f"Found {searchType} connection in \n{waitTime} seconds and {info[2]} steps")
+                self.statusWindow.insert(tk.END, f"Found {searchType} connection in \n{waitTime} seconds and {int((len(path)-1)/2)} degrees of seperation")
                 self.statusWindow.config(state=tk.DISABLED)
 
                 fig = plt.figure(figsize=(10, 10), dpi=100) #theoretically this should be screen size agnostic but not sure
-                y = [x for x in range(100)]
                 plot = fig.add_subplot(111)
-                plot.plot(y)
+                pos = nx.spring_layout(info)
+                nx.draw(info, pos, ax=plot)
                 canvas = FigureCanvasTkAgg(fig, master = self.actorWindow)
                 canvas.draw()
                 canvas.get_tk_widget().pack()
@@ -154,10 +164,10 @@ class App():
                 self.statusWindow.delete('1.0', tk.END)
                 self.statusWindow.insert(tk.END, "No connection found :(")
                 self.statusWindow.config(state=tk.DISABLED)
-        except: #custom error class that calls when they call a faulty actor?
+        else:
             self.statusWindow.config(state=tk.NORMAL)
             self.statusWindow.delete('1.0', tk.END)
-            self.statusWindow.insert(tk.END, "Sorry, that actor doesn't exist")
+            self.statusWindow.insert(tk.END, f"Sorry, actor {name1 if id1 == "" else name2 if id2 == "" else ""} not found")
             self.statusWindow.config(state=tk.DISABLED)
 
 def doNothing(name1, name2, searchType):
@@ -166,15 +176,15 @@ def doNothing(name1, name2, searchType):
 
 
 if __name__ == "__main__":
-    import python_ta
+    #import python_ta
 
-    python_ta.check_all(config={
+    '''python_ta.check_all(config={
         'max-line-length': 120,
         'disable': ['E1136'],
         'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot'],
         'allowed-io': ['load_review_graph'],
         'max-nested-blocks': 4
-    })
+    })'''
 
     app = App()
     app.run()
