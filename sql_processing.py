@@ -175,14 +175,16 @@ def create_movie_table(creation_database_name: str, main_database: str, number_o
 
     insertion_cursor.execute("""CREATE TABLE movie(
                     id PRIMARY KEY, title, isAdult, startYear, endYear,
-                    runtimeMinutes, genre, averageRating, numVotes)""")
+                    runtimeMinutes, genre)""")
     insertion_connection.commit()
 
     movies = main_cursor.execute("""SELECT movie.tconst, primaryTitle, isAdult, startYear, endYear, runtimeMinutes,
-            genres, averageRating, numVotes FROM movie JOIN ratings ON movie.tconst = ratings.tconst
-            WHERE titleType = 'movie' ORDER BY RANDOM() LIMIT ?""", (number_of_movies,)).fetchall()
+            genres FROM movie
+            WHERE titleType = 'movie'""", ).fetchall()
 
-    insertion_cursor.executemany("""INSERT INTO movie VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", movies)
+    print(len(movies))
+
+    insertion_cursor.executemany("""INSERT INTO movie VALUES (?, ?, ?, ?, ?, ?, ?)""", movies)
     insertion_connection.commit()
 
     insertion_cursor.execute("""CREATE UNIQUE INDEX idx_movie_id ON movie(id)""")
@@ -213,6 +215,9 @@ def create_actor_table(creation_database_name: str, main_database: str) -> None:
 
     insertion_cursor.execute("""CREATE TABLE actor(id PRIMARY KEY, name, birthYear, deathYear, actorOrActress)""")
 
+    insertion_cursor.execute("""CREATE TABLE temp_edge(
+                actor_id,
+                movie_id)""")
     insertion_cursor.execute("""CREATE TABLE edge(
                 object_id PRIMARY KEY,
                 connections)""")
@@ -227,38 +232,51 @@ def create_actor_table(creation_database_name: str, main_database: str) -> None:
         actors = main_cursor.execute("""SELECT actor.nconst, primaryName, birthYear, deathYear, primaryProfession
                 FROM actor
                 JOIN connections ON actor.nconst = connections.nconst
-                WHERE tconst = ?""", movie).fetchall()
+                WHERE tconst = ? AND (category = 'actor' OR category = 'actress')""", movie).fetchall()
 
-        returned_actors = main_cursor.execute("""SELECT nconst
+        inserted_edges += main_cursor.execute("""SELECT nconst, tconst
                 FROM connections WHERE tconst = ? AND (category = 'actor' OR category = 'actress')""", movie).fetchall()
-
-        list_of_actors = ','.join([a[0] for a in returned_actors])
-
-        inserted_edges.append((movie[0], list_of_actors))
 
         for actor in actors:
             if 'actor' in actor[4]:
                 inserted_actors.append(actor[0:4] + ('M',))
             elif 'actress' in actor[4]:
                 inserted_actors.append(actor[0:4] + ('F',))
+            else:
+                inserted_actors.append(actor[0:4] + ('NULL',))
 
+    insertion_cursor.executemany("""INSERT INTO temp_edge VALUES(?, ?)""", inserted_edges)
     insertion_cursor.executemany("""INSERT OR IGNORE INTO actor VALUES(?, ?, ?, ?, ?)""", inserted_actors)
     insertion_cursor.execute("""CREATE UNIQUE INDEX idx_actor_id ON actor(id)""")
+    insertion_cursor.execute("""CREATE INDEX idx_edge_movie ON temp_edge(movie_id)""")
+    insertion_cursor.execute("""CREATE INDEX idx_edge_actor ON temp_edge(actor_id)""")
+
     insertion_connection.commit()
 
     actors = insertion_cursor.execute("""SELECT id FROM actor""").fetchall()
-
     for actor in actors:
-        returned_movies = main_cursor.execute("""SELECT movie.tconst
-                            FROM connections JOIN movie ON movie.tconst = connections.tconst
-                            WHERE nconst = ? AND titleType = 'movie'""", actor).fetchall()
+        returned_movies = insertion_cursor.execute("""SELECT movie_id
+                FROM temp_edge WHERE actor_id = ?""", actor).fetchall()
+
+        # print(str(returned_movies) + " | for | " + str(actor))
 
         list_of_movies = ','.join([m[0] for m in returned_movies])
         inserted_edges.append((actor[0], list_of_movies))
-    insertion_cursor.executemany("""INSERT INTO edge VALUES(?, ?)""", inserted_edges)
+
+    movies = insertion_cursor.execute("""SELECT id FROM movie""").fetchall()
+    for movie in movies:
+        returned_actors = insertion_cursor.execute("""SELECT actor_id
+                FROM temp_edge WHERE movie_id = ?""", movie).fetchall()
+        # print(str(returned_actors) + " | for | " + str(movie))
+
+        list_of_actors = ','.join([a[0] for a in returned_actors])
+        inserted_edges.append((movie[0], list_of_actors))
+
+    insertion_cursor.executemany("""INSERT OR IGNORE INTO edge VALUES(?, ?)""", inserted_edges)
     insertion_connection.commit()
 
     insertion_cursor.execute("""CREATE UNIQUE INDEX idx_edge ON edge(object_id)""")
+    insertion_cursor.execute("""DROP TABLE temp_edge""")
     insertion_connection.commit()
     insertion_cursor.close()
     insertion_connection.close()
