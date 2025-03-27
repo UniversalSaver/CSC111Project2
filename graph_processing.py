@@ -222,6 +222,28 @@ class ActorGraph:
                 cursor.close()
                 return {movie[0] for movie in movies}
 
+    def get_valid_actors(self, is_alive: str = "") -> list[str]:
+        """
+        Returns a list of valid actors based on the restrictions given
+
+        Preconditions:
+            - is_alive.lower() in ["alive", "dead", ""]
+        """
+        with sql.connect(self._db_path) as connection:
+            cursor = connection.cursor()
+
+            if is_alive == 'alive':
+                return cursor.execute("""
+                        SELECT name FROM actor WHERE deathYear = '\\N'
+                """).fetchall()
+            elif is_alive == 'dead':
+                return cursor.execute("""
+                        SELECT name FROM actor WHERE deathYear != '\\N'
+                """).fetchall()
+            else:
+                return cursor.execute("""
+                        SELECT name FROM actor
+                """).fetchall()
 
 class ShortestActorGraph(ActorGraph):
     """
