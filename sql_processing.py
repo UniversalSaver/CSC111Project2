@@ -182,7 +182,7 @@ def create_movie_table(creation_database_name: str, main_database: str, number_o
             genres FROM movie
             WHERE titleType = 'movie' LIMIT ?""", (number_of_movies,)).fetchall()
 
-    print(len(movies))
+    # print(len(movies))
 
     insertion_cursor.executemany("""INSERT INTO movie VALUES (?, ?, ?, ?, ?, ?, ?)""", movies)
     insertion_connection.commit()
@@ -250,8 +250,9 @@ def create_actor_table(creation_database_name: str, main_database: str) -> None:
     insertion_cursor.execute("""CREATE UNIQUE INDEX idx_actor_id ON actor(id)""")
     insertion_cursor.execute("""CREATE INDEX idx_edge_movie ON temp_edge(movie_id)""")
     insertion_cursor.execute("""CREATE INDEX idx_edge_actor ON temp_edge(actor_id)""")
-
     insertion_connection.commit()
+
+    inserted_edges = []
 
     actors = insertion_cursor.execute("""SELECT id FROM actor""").fetchall()
     for actor in actors:
