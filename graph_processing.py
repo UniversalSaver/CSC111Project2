@@ -268,6 +268,88 @@ class ShortestActorGraph(ActorGraph):
 
         return []
 
+    def get_restricted_path(self, actor1: str, actor2: str, is_alive: str = "", released_before: int = 9999, released_after: int = 0) -> list[str]:
+        """
+        Given two actor IDs, return the shortest path between the two as a list of actors/movies with the following restrictions:
+
+        If specified, only use nodes between alive actors exclusively or dead actors exclusively
+
+        If specified, only use nodes of movies released before or during a specified year
+
+        If specified, only use nodes of movies released after or during specified year
+
+        Return an empty list if no such path exists.
+
+        Preconditions:
+            - is_alive.lower() in ["alive", "dead", ""]
+        """
+        if actor1 == actor2:
+            return [actor1]
+
+        queue = deque()
+        queue.append([actor1])
+        visited = set()
+        visited.add(actor1)
+
+
+        # Initialize SQL connection:
+        with sql.connect(self._db_path) as connection:
+            cursor = connection.cursor()
+
+            while queue:
+                curr_path = queue.popleft()
+                curr_node = curr_path[-1]
+
+                for adjacent in self.get_adjacent_nodes(curr_node):
+                    # Return found path!
+                    if adjacent == actor2:
+                        return curr_path + [adjacent]
+
+                    # Check Neighbours
+                    if adjacent not in visited:
+
+                        # Check for alive/dead if applicable:
+                        check_alive = True
+                        if is_alive != "" and adjacent[:2] == "nm":
+                            
+                            # SQL Fetch deathYear
+                            cursor.execute("SELECT deathYear FROM actor WHERE id = ?", (adjacent,))
+                            alive_status = cursor.fetchone()  
+                            
+                            # If actor is dead and we want alive nodes:
+                            if alive_status == "\\N":
+                                if is_alive.lower() == "alive":
+                                    check_alive = False
+                            # If actor is alive and we want dead nodes:
+                            else:
+                                if is_alive.lower() == "dead":
+                                    check_alive = False
+
+                        # Check for movie released before/after a certain year:
+                        check_release_date = True
+                        if (released_before != 9999 or released_after != 0) and adjacent[:2] == "tt":
+
+                            # SQL Fetch startYear
+                            cursor.execute("SELECT startYear FROM movie WHERE id = ?", (adjacent,))
+                            release_date = cursor.fetchone()  # Fetch the result
+                            release_date = int(release_date[0]) if release_date and release_date[0] != "\\N" else None # Parse it into an int or None
+
+                            # If movie was outside of given range:
+                            if release_date is None or release_date < released_after or release_date > released_before:
+                                check_release_date = False
+
+
+                        # Mark node as checked
+                        visited.add(adjacent)
+
+                        # Search this node if s
+                        if check_alive and check_release_date:
+                            queue.append(curr_path + [adjacent])
+
+        return []
+
+
+
     # def movie_path(self, actor_path: list[str]) -> list[str]:
     #     """
     #     Given a path between two actors, return a list of movies such that for every two consecutive actors in the
