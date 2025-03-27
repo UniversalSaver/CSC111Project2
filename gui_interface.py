@@ -221,7 +221,7 @@ class App():
         self.figure = Figure(figsize=(20, 20), dpi=100)
         plot = self.figure.add_axes((0, 0, 1, 1))
         plot.axis('off')
-        pos = nx.spring_layout(info)
+        pos = nx.kamada_kawai_layout(info)
         colours = [info.nodes[k]['color'] for k in info.nodes]
         nx.draw(info, pos, node_color=colours, ax=plot, with_labels=True)
         x_min, x_max = plot.get_xlim()
@@ -236,16 +236,15 @@ class App():
         self.canvas.get_tk_widget().pack()
 
 
-
 if __name__ == "__main__":
     import python_ta
 
-    python_ta.check_all(config={
-        'max-line-length': 120,
-        'disable': ['E1136'],
-        'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot'],
-        'allowed-io': ['load_review_graph'],
-        'max-nested-blocks': 4
-    })
-    #app = App("./small_data_files/small_db.db")
-    #app.run()
+    # python_ta.check_all(config={
+    #     'max-line-length': 120,
+    #     'disable': ['E1136'],
+    #     'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot'],
+    #     'allowed-io': ['load_review_graph'],
+    #     'max-nested-blocks': 4
+    # })
+    app = App("./data_files/basically_all.db")
+    app.run()
