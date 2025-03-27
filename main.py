@@ -5,4 +5,8 @@ TODO - add copyright
 """
 import gui_interface
 
+if __name__ == '__main__':
+    #TODO something to do with choosing the data? im not sure
+    app = gui_interface.App()
+    app.run()
 # TODO - This depends on gui_interface

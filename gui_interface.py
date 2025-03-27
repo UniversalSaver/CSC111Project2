@@ -4,165 +4,211 @@ to functions in graph_processing.py
 
 # TODO - add copyright
 """
-import graph_processing as gp
+import time
 from tkinter.font import Font
 from tkinter import Tk, Frame, Label, Button, OptionMenu, Text, StringVar, PhotoImage
 from tkinter import ttk
 import tkinter as tk
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import time
+import networkx as nx
+import graph_processing as gp
+
 
 class App():
+    '''
+    A class to represent the GUI for the user to interact with the program.
+
+    Instance Attributes:
+        root: the main window of the application
+        font: the font to be used in the application
+        dimensions: the dimensions of the window (found during init, depend on screen size)
+        type: stores an item that holds the type of search to be done
+        names: a list of 2 items that hold the names of the actors to be searched
+        status_window: the place in the window that holds the text box (lock/unlock purposes)
+        actor_window: the place in the window that holds the actor image
+        db_path: the path to the database file
+    '''
     root: Tk
     font: Font
-    width: int
-    height: int
+    dimensions: tuple[int, int]
     type: StringVar
-    name1: StringVar
-    name2: StringVar
-    statusWindow: Text
-    graphWindow: Label
+    names: list[StringVar]
+    status_window: Text
+    actor_window: Label
+    db_path: str
 
-    def __init__(self):
+    def __init__(self, path: str) -> None:
         self.root = Tk()
         self.root.title("Created by Tai Poole, Nabhan Rashid, and Danny Tran")
-        screenWidth = self.root.winfo_screenwidth()
-        screenHeight = self.root.winfo_screenheight()
-        self.width = int(screenWidth / 4 * 3)
-        self.height = int(screenHeight / 4 * 3)
-        centerX = int(screenWidth / 2 - self.width / 2)
-        centerY = int(screenHeight / 2 - self.height / 2)
-        self.root.geometry(f'{self.width}x{self.height}+{centerX}+{centerY}')
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        self.dimensions = (int(screen_width / 4 * 3), int(screen_height / 4 * 3))
+        center_x = int(screen_width / 2 - self.dimensions[0] / 2)
+        center_y = int(screen_height / 2 - self.dimensions[1] / 2)
+        self.root.geometry(f'{self.dimensions[0]}x{self.dimensions[1]}+{center_x}+{center_y}')
         self.font = Font(family="Comic Sans MS", size=15) #TODO please do not let this be in comic sans
+        self.db_path = path
 
-        self.initInput(self.root)
-        self.initActor(self.root)
+        self.init_input(self.root)
+        self.init_actor(self.root)
 
-    def run(self):
+    def run(self) -> None:
+        '''
+        Runs the application
+        '''
         self.root.mainloop()
 
-    def initInput(self, mainFrame):
-        inputFrame = Frame(mainFrame, bg='blue', bd=15, width=self.width/3)
+    def init_input(self, main_frame: Tk) -> None:
+        '''
+        Initializes the input frame (left side of the window)
+        '''
+        input_frame = Frame(main_frame, bg='blue', bd=15, width=self.dimensions[0] / 3)
 
-        self.initInfo(inputFrame)
-        self.initField(inputFrame)
+        self.init_info(input_frame)
+        self.init_field(input_frame)
 
-        inputFrame.pack(side=tk.LEFT, fill=tk.BOTH)
-        inputFrame.pack_propagate(False)
+        input_frame.pack(side=tk.LEFT, fill=tk.BOTH)
+        input_frame.pack_propagate(False)
 
-    def initInfo(self, inputFrame):
-        infoFrame = Frame(inputFrame, bg='green', bd=15)
-        title = ttk.Label(infoFrame, font=self.font, wraplength=(self.width/3)-50, justify=tk.CENTER, text="The really cool connected thing TODO NAME")
-        description = (ttk.Label(infoFrame, font=self.font, wraplength=(self.width/3)-50, justify=tk.CENTER,
-            text="This is a really cool thing that will connect actors to movies. she kevin on my bacon till i 6 degrees or less")) #probably make this a text box?
-        infoFrame.pack(side=tk.TOP, fill=tk.BOTH)
+    def init_info(self, input_frame: Frame) -> None:
+        '''
+        Initializes the info frame (top left side of the window)
+        '''
+        info_frame = Frame(input_frame, bg='green', bd=15)
+        title = ttk.Label(info_frame, font=self.font, wraplength=(self.dimensions[0] / 3) - 50, justify=tk.CENTER,
+                          text="The really cool connected thing TODO NAME")
+        description = ttk.Label(info_frame, font=self.font, wraplength=(self.dimensions[0] / 3) - 50, justify=tk.CENTER,
+                                text="This is a really cool thing that will connect actors to movies. she kevin on my bacon till i 6 degrees or less")
+        info_frame.pack(side=tk.TOP, fill=tk.BOTH)
         title.pack(side=tk.TOP)
         description.pack(side=tk.TOP)
 
-    def initField(self, inputFrame):
-        fieldFrame = Frame(inputFrame, bd=15)
+    def init_field(self, input_frame: Frame) -> None:
+        '''
+        Initializes the field frame (bottom left side of the window)
+        '''
+        field_frame = Frame(input_frame, bd=15)
 
-        self.initName1(fieldFrame)
-        self.initName2(fieldFrame)
-        self.initSearch(fieldFrame)
-        self.initDbg(fieldFrame)
+        self.init_name1(field_frame)
+        self.init_name2(field_frame)
+        self.init_search(field_frame)
+        self.init_dbg(field_frame)
 
-        fieldFrame.pack(fill=tk.BOTH, expand=True)
+        field_frame.pack(fill=tk.BOTH, expand=True)
 
-    def initName1(self, fieldFrame):
-        name1Frame = Frame(fieldFrame, bd=15)
-        name1Label = ttk.Label(name1Frame, font=self.font, text="Starting actor's name: ")
-        self.name1 = StringVar(self.root)
-        name1Input = ttk.Entry(name1Frame, textvariable=self.name1)
+    def init_name1(self, field_frame: Frame) -> None:
+        '''
+        Initializes the first name input frame
+        '''
+        name1_frame = Frame(field_frame, bd=15)
+        name1_label = ttk.Label(name1_frame, font=self.font, text="Starting actor's name: ")
+        self.names[0] = StringVar(self.root)
+        name1_input = ttk.Entry(name1_frame, textvariable=self.names[0])
 
-        name1Frame.pack(expand=True)
-        name1Label.pack()
-        name1Input.pack()
+        name1_frame.pack(expand=True)
+        name1_label.pack()
+        name1_input.pack()
 
-    def initName2(self, fieldFrame):
-        name2Frame = Frame(fieldFrame, bd=15)
-        name2Label = ttk.Label(name2Frame, font=self.font, text="Ending actor's name: ")
-        self.name2 = StringVar(self.root)
-        name2Input = ttk.Entry(name2Frame, textvariable=self.name2)
+    def init_name2(self, field_frame: Frame) -> None:
+        '''
+        Initializes the second name input frame
+        '''
+        name2_frame = Frame(field_frame, bd=15)
+        name2_label = ttk.Label(name2_frame, font=self.font, text="Ending actor's name: ")
+        self.names[1] = StringVar(self.root)
+        name2_input = ttk.Entry(name2_frame, textvariable=self.names[0])
 
-        name2Frame.pack(expand=True)
-        name2Label.pack()
-        name2Input.pack()
+        name2_frame.pack(expand=True)
+        name2_label.pack()
+        name2_input.pack()
 
-    def initSearch(self, fieldFrame):
-        searchFrame = Frame(fieldFrame, bd=15)
-        dropdownFrame = Frame(searchFrame, bd=15)
-        searchLabel = ttk.Label(dropdownFrame, font=self.font, text="Search type: ")
+    def init_search(self, field_frame: Frame) -> None:
+        '''
+        Initializes the search input frame, including search type and search button
+        '''
+        search_frame = Frame(field_frame, bd=15)
+        dropdown_frame = Frame(search_frame, bd=15)
+        search_label = ttk.Label(dropdown_frame, font=self.font, text="Search type: ")
         self.type = StringVar(self.root)
         self.type.set("Fast")
-        typeBox = OptionMenu(dropdownFrame, self.type, "Fast", "Short")
-        searchButton = Button(searchFrame, command=self.doTheThing, font=self.font, text="Go!")
+        type_box = OptionMenu(dropdown_frame, self.type, "Fast", "Short")
+        search_button = Button(search_frame, command=self.doTheThing, font=self.font, text="Go!")
 
-        searchFrame.pack(expand=True)
-        dropdownFrame.pack(side=tk.LEFT)
-        searchLabel.pack()
-        typeBox.pack()
-        searchButton.pack(side=tk.RIGHT)
+        search_frame.pack(expand=True)
+        dropdown_frame.pack(side=tk.LEFT)
+        search_label.pack()
+        type_box.pack()
+        search_button.pack(side=tk.RIGHT)
 
-    def initDbg(self, fieldFrame):
-        dbgFrame = Frame(fieldFrame, bd=15)
-        self.statusWindow = Text(dbgFrame, font=self.font)
-        self.statusWindow.insert(tk.END, "")
-        self.statusWindow.config(state=tk.DISABLED)
+    def init_dbg(self, field_frame: Frame) -> None:
+        '''
+        Initializes the debug frame, for displaying the status of the search
+        '''
+        dbg_frame = Frame(field_frame, bd=15)
+        self.status_window = Text(dbg_frame, font=self.font)
+        self.status_window.insert(tk.END, "")
+        self.status_window.config(state=tk.DISABLED)
 
-        dbgFrame.pack()
-        self.statusWindow.pack()
+        dbg_frame.pack()
+        self.status_window.pack()
 
-    def initActor(self, mainFrame):
+    def init_actor(self, main_frame: Tk) -> None:
+        '''
+        Initializes the actor frame (right side of window)
+        '''
         global angryBaby
         angryBaby = PhotoImage(file="angrybaby.png")
-        actorFrame = Frame(mainFrame, bg='red')
-        self.actorWindow = Label(actorFrame, image=angryBaby)
-        self.actorWindow.pack(expand=True)
+        actor_frame = Frame(main_frame, bg='red')
+        self.actor_window = Label(actor_frame, image=angryBaby)
+        self.actor_window.pack(expand=True)
 
-        actorFrame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        actor_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
-    def doTheThing(self):
-        name1 = self.name1.get()
-        name2 = self.name2.get()
-        searchType = self.type.get()
-        try:
-            self.statusWindow.config(state=tk.NORMAL)
-            self.statusWindow.delete('1.0', tk.END)
-            self.statusWindow.insert(tk.END, "Searching...")
-            self.statusWindow.config(state=tk.DISABLED)
-            startTime = time.time()
-            info = doNothing(name1, name2, searchType) #TODO this will be the gp function call
-            #depends on implementation but probably something like?
-            waitTime = round(time.time() - startTime, 2)
-            if info[0]:
-                self.statusWindow.config(state=tk.NORMAL)
-                self.statusWindow.delete('1.0', tk.END)
-                self.statusWindow.insert(tk.END, f"Found {searchType} connection in \n{waitTime} seconds and {info[2]} steps")
-                self.statusWindow.config(state=tk.DISABLED)
+    def doTheThing(self) -> None:
+        name1 = self.names[0].get()
+        name2 = self.names[1].get()
+        search_type = self.type.get()
+        self.status_window.config(state=tk.NORMAL)
+        self.status_window.delete('1.0', tk.END)
+        self.status_window.insert(tk.END, "Searching...")
+        self.status_window.config(state=tk.DISABLED)
+        g = gp.ShortestActorGraph(self.db_path)
 
-                fig = plt.figure(figsize=(10, 10), dpi=100) #theoretically this should be screen size agnostic but not sure
-                y = [x for x in range(100)]
+        start_time = time.time()
+        id1, id2 = g.get_actor_id(name1), g.get_actor_id(name2)
+        if id1 != "" and id2 != "":
+            path = g.get_path(id1, id2) #change for connection type?
+            if len(path) > 0:
+                info = g.make_networkx_graph(path)
+                wait_time = round(time.time() - start_time, 3)
+
+                self.status_window.config(state=tk.NORMAL)
+                self.status_window.delete('1.0', tk.END)
+                self.status_window.insert(tk.END,
+                                          "Found ", search_type,
+                                          " connection in \n", str(wait_time),
+                                          " seconds and ", str(int((len(path) - 1) / 2)), "degrees of seperation")
+                self.status_window.config(state=tk.DISABLED)
+
+                fig = plt.figure(figsize=(10, 10), dpi=1000)
                 plot = fig.add_subplot(111)
-                plot.plot(y)
-                canvas = FigureCanvasTkAgg(fig, master = self.actorWindow)
+                pos = nx.spring_layout(info)
+                nx.draw(info, pos, ax=plot)
+                canvas = FigureCanvasTkAgg(fig, master=self.actor_window)
                 canvas.draw()
                 canvas.get_tk_widget().pack()
             else:
-                self.statusWindow.config(state=tk.NORMAL)
-                self.statusWindow.delete('1.0', tk.END)
-                self.statusWindow.insert(tk.END, "No connection found :(")
-                self.statusWindow.config(state=tk.DISABLED)
-        except: #custom error class that calls when they call a faulty actor?
-            self.statusWindow.config(state=tk.NORMAL)
-            self.statusWindow.delete('1.0', tk.END)
-            self.statusWindow.insert(tk.END, "Sorry, that actor doesn't exist")
-            self.statusWindow.config(state=tk.DISABLED)
-
-def doNothing(name1, name2, searchType):
-    time.sleep(0.3)
-    return [True, 0, 0]
+                self.status_window.config(state=tk.NORMAL)
+                self.status_window.delete('1.0', tk.END)
+                self.status_window.insert(tk.END, "No connection found :(")
+                self.status_window.config(state=tk.DISABLED)
+        else:
+            self.status_window.config(state=tk.NORMAL)
+            self.status_window.delete('1.0', tk.END)
+            self.status_window.insert(tk.END,
+                                      f"Sorry, actor {name1 if id1 == "" else name2 if id2 == "" else ""} not found")
+            self.status_window.config(state=tk.DISABLED)
 
 
 if __name__ == "__main__":
@@ -175,66 +221,5 @@ if __name__ == "__main__":
         'allowed-io': ['load_review_graph'],
         'max-nested-blocks': 4
     })
-
-    app = App()
-    app.run()
-
-
-# TODO - I don't know enough about tkinter to know what type of functions or classes are necessary to use it. Whoever
-# wants to do this. Call and we can discuss the format
-#
-# '''fieldFrame = Frame(inputFrame, bd=15)
-
-'''name1Frame = Frame(fieldFrame, bd=15)
-name1Label = ttk.Label(name1Frame, font=self.font, text="Starting actor's name: ")
-name1Input = ttk.Entry(name1Frame)
-
-name2Frame = Frame(fieldFrame, bd=15)
-name2Label = ttk.Label(name2Frame, font=self.font, text="Ending actor's name: ")
-name2Input = ttk.Entry(name2Frame)
-
-searchFrame = Frame(fieldFrame, bd=15)
-dropdownFrame = Frame(searchFrame, bd=15)
-searchLabel = ttk.Label(dropdownFrame, font=self.font, text="Search type: ")
-type = StringVar(self.root)
-type.set("Fast")
-typeBox = OptionMenu(dropdownFrame, type, "Fast", "Short")
-searchButton = Button(searchFrame, font=self.font, text="Go!")
-
-dbgFrame = Frame(fieldFrame, bd=15)
-dbgWindow = Text(dbgFrame, state=tk.DISABLED, font=self.font)
-
-
-
-
-actorFrame = Frame(self.root, bg='red')
-
-actorFrame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-angryBaby = PhotoImage(file="angrybaby.png")
-actorLabel = ttk.Label(actorFrame, image=angryBaby)
-actorLabel.pack(expand=True)
-
-inputFrame.pack(side=tk.LEFT, fill=tk.BOTH)
-inputFrame.pack_propagate(False)
-
-
-
-fieldFrame.pack(fill=tk.BOTH, expand=True)
-
-name1Frame.pack(expand=True)
-name1Label.pack()
-name1Input.pack()
-
-name2Frame.pack(expand=True)
-name2Label.pack()
-name2Input.pack()
-
-searchFrame.pack(expand=True)
-dropdownFrame.pack(side=tk.LEFT)
-searchLabel.pack()
-typeBox.pack()
-searchButton.pack(side=tk.RIGHT)
-
-dbgFrame.pack()
-dbgWindow.pack()
-dbgWindow.insert(tk.END, "This is the little box that says when it worked/error messages (wrong name) etc")'''
+    #app = App("./small_data_files/small_db.db")
+    #app.run()
