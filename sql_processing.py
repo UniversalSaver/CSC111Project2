@@ -58,7 +58,6 @@ def compile_full_data(main_database: str) -> str:
             {header[0]} PRIMARY_KEY, {header[1]}, {header[2]}, {header[3]}, {header[4]}, {header[5]}
             )
             """)
-            cursor.execute("""CREATE UNIQUE INDEX idx_actor_id ON actor(nconst)""")
 
             for line in reader:
 
@@ -66,6 +65,7 @@ def compile_full_data(main_database: str) -> str:
                 INSERT INTO actor VALUES
                 (?, ?, ?, ?, ?, ?)
                 """, tuple(line))
+            cursor.execute("""CREATE UNIQUE INDEX idx_actor_id ON actor(nconst)""")
             connection.commit()
 
         with open(ID_TO_MOVIE) as file:
@@ -79,7 +79,6 @@ def compile_full_data(main_database: str) -> str:
                 {header[6]}, {header[7]}, {header[8]}
                 )
                 """)
-            cursor.execute("""CREATE UNIQUE INDEX idx_movie_id ON movie(tconst)""")
 
             for line in reader:
                 if len(line) == 9:
@@ -87,6 +86,7 @@ def compile_full_data(main_database: str) -> str:
                     INSERT INTO movie VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, tuple(line))
+            cursor.execute("""CREATE UNIQUE INDEX idx_movie_id ON movie(tconst)""")
             connection.commit()
 
         with open(MOVIE_TO_ACTOR) as file:
@@ -99,7 +99,6 @@ def compile_full_data(main_database: str) -> str:
                 {header[0]}, {header[1]}, {header[2]}, {header[3]}, {header[4]}, {header[5]}
                 )
                 """)
-            cursor.execute("""CREATE INDEX idx_connections ON connections(tconst, nconst)""")
 
             for line in reader:
                 if len(line) == 6:
@@ -108,6 +107,8 @@ def compile_full_data(main_database: str) -> str:
                     INSERT INTO connections VALUES
                     (?, ?, ?, ?, ?, ?)
                     """, tuple(line))
+            cursor.execute("""CREATE INDEX idx_connections_actor ON connections(nconst)""")
+            cursor.execute("""CREATE INDEX idx_connections_movie ON connections(tconst)""")
             connection.commit()
 
         with open(RATINGS) as file:
@@ -126,6 +127,7 @@ def compile_full_data(main_database: str) -> str:
                 INSERT INTO ratings VALUES
                 (?, ?, ?)
                 """, tuple(line))
+            cursor.execute("""CREATE INDEX indx_ratings ON ratings(tconst)""")
             connection.commit()
 
         cursor.close()
@@ -174,7 +176,6 @@ def create_movie_table(creation_database_name: str, main_database: str, number_o
     insertion_cursor.execute("""CREATE TABLE movie(
                     id PRIMARY KEY, title, isAdult, startYear, endYear,
                     runtimeMinutes, genre, averageRating, numVotes)""")
-    insertion_cursor.execute("""CREATE UNIQUE INDEX idx_movie_id ON movie(id)""")
     insertion_connection.commit()
 
     movies = main_cursor.execute("""SELECT movie.tconst, primaryTitle, isAdult, startYear, endYear, runtimeMinutes,
@@ -184,6 +185,8 @@ def create_movie_table(creation_database_name: str, main_database: str, number_o
     insertion_cursor.executemany("""INSERT INTO movie VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", movies)
     insertion_connection.commit()
 
+    insertion_cursor.execute("""CREATE UNIQUE INDEX idx_movie_id ON movie(id)""")
+    insertion_connection.commit()
     insertion_cursor.close()
     insertion_connection.close()
 
@@ -208,29 +211,30 @@ def create_actor_table(creation_database_name: str, main_database: str) -> None:
     main_connection = sql.connect(main_database)
     main_cursor = main_connection.cursor()
 
-    insertion_cursor.execute("""CREATE TABLE actor(id PRIMARY_KEY, name, birthYear, deathYear, actorOrActress)""")
-    insertion_cursor.execute("""CREATE UNIQUE INDEX idx_actor_id ON actor(id)""")
+    insertion_cursor.execute("""CREATE TABLE actor(id PRIMARY KEY, name, birthYear, deathYear, actorOrActress)""")
 
     insertion_cursor.execute("""CREATE TABLE edge(
-                movie_id,
-                actor_id,
-                FOREIGN KEY(movie_id) REFERENCES movie(id),
-                FOREIGN KEY(actor_id) REFERENCES actor(id))""")
-    insertion_cursor.execute("""CREATE INDEX idx_edge ON edge(movie_id, actor_id)""")
+                object_id PRIMARY KEY,
+                connections)""")
     insertion_connection.commit()
 
     movies = insertion_cursor.execute("""SELECT id FROM movie""").fetchall()
 
     inserted_actors = []
-    inserted_edges = []
+    # The type is defined because PyCharm got annoyed otherwise for some reason
+    inserted_edges: list[tuple] = []
     for movie in movies:
         actors = main_cursor.execute("""SELECT actor.nconst, primaryName, birthYear, deathYear, primaryProfession
                 FROM actor
                 JOIN connections ON actor.nconst = connections.nconst
                 WHERE tconst = ?""", movie).fetchall()
 
-        inserted_edges += main_cursor.execute("""SELECT tconst, nconst
+        returned_actors = main_cursor.execute("""SELECT nconst
                 FROM connections WHERE tconst = ? AND (category = 'actor' OR category = 'actress')""", movie).fetchall()
+
+        list_of_actors = ','.join([a[0] for a in returned_actors])
+
+        inserted_edges.append((movie[0], list_of_actors))
 
         for actor in actors:
             if 'actor' in actor[4]:
@@ -239,9 +243,23 @@ def create_actor_table(creation_database_name: str, main_database: str) -> None:
                 inserted_actors.append(actor[0:4] + ('F',))
 
     insertion_cursor.executemany("""INSERT OR IGNORE INTO actor VALUES(?, ?, ?, ?, ?)""", inserted_actors)
+    insertion_cursor.execute("""CREATE UNIQUE INDEX idx_actor_id ON actor(id)""")
+    insertion_connection.commit()
+
+    actors = insertion_cursor.execute("""SELECT id FROM actor""").fetchall()
+
+    for actor in actors:
+        returned_movies = main_cursor.execute("""SELECT movie.tconst
+                            FROM connections JOIN movie ON movie.tconst = connections.tconst
+                            WHERE nconst = ? AND titleType = 'movie'""", actor).fetchall()
+
+        list_of_movies = ','.join([m[0] for m in returned_movies])
+        inserted_edges.append((actor[0], list_of_movies))
     insertion_cursor.executemany("""INSERT INTO edge VALUES(?, ?)""", inserted_edges)
     insertion_connection.commit()
 
+    insertion_cursor.execute("""CREATE UNIQUE INDEX idx_edge ON edge(object_id)""")
+    insertion_connection.commit()
     insertion_cursor.close()
     insertion_connection.close()
 
@@ -252,16 +270,16 @@ def create_actor_table(creation_database_name: str, main_database: str) -> None:
 if __name__ == '__main__':
     import python_ta
 
-    python_ta.check_all(config={
-        'max-line-length': 120,
-        'disable': ['E1136'],
-        'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot', 'os'],
-        'allowed-io': ['compile_full_data', 'create_movie_table', 'create_actor_table', 'create_database'],
-        'max-nested-blocks': 4
-    })
+    # python_ta.check_all(config={
+    #     'max-line-length': 120,
+    #     'disable': ['E1136'],
+    #     'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot', 'os'],
+    #     'allowed-io': ['compile_full_data', 'create_movie_table', 'create_actor_table', 'create_database'],
+    #     'max-nested-blocks': 4
+    # })
 
     if input("Would you like to make a Main Database which has all the information from the downloaded files? (Y/N) "
-             "(Note this takes a while)").strip().lower() == 'y':
+             "(Note this takes a while) ").strip().lower() == 'y':
         if not (os.path.exists(ID_TO_ACTOR) and os.path.exists(ID_TO_MOVIE) and os.path.exists(MOVIE_TO_ACTOR)
                 and os.path.exists(RATINGS)):
             print("Please make sure you have name.basics.tsv, title.basics.tsv, title.principals.tsv, title.ratings.tsv"

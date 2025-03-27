@@ -203,24 +203,16 @@ class ActorGraph:
         """
         with sql.connect(self._db_path) as connection:
             cursor = connection.cursor()
-            if given_id[0:2] == 'tt':
-                actors = cursor.execute("""
-                SELECT actor_id FROM edge WHERE
-                movie_id = ?
-                """, (given_id,)).fetchall()
+            connected_nodes = cursor.execute("""
+                                SELECT connections FROM edge WHERE object_id = ?
+                        """, (given_id,)).fetchone()
 
-                # Unpacks the list of tuples
-                cursor.close()
-                return {actor[0] for actor in actors}
-            else:
-                movies = cursor.execute("""
-                SELECT movie_id FROM edge WHERE
-                actor_id = ?
-                """, (given_id,)).fetchall()
+            cursor.close()
 
-                # Unpacks the list of tuples
-                cursor.close()
-                return {movie[0] for movie in movies}
+            if connected_nodes is None:
+                return set()
+
+            return set(connected_nodes[0].split(','))
 
     def get_valid_actors(self, is_alive: str = "") -> list[str]:
         """
@@ -244,6 +236,7 @@ class ActorGraph:
                 return cursor.execute("""
                         SELECT name FROM actor
                 """).fetchall()
+
 
 class ShortestActorGraph(ActorGraph):
     """
@@ -431,16 +424,16 @@ class WeightedActorGraph(ActorGraph):
         return []
 
 
-if __name__ == '__main__':
-    import python_ta
-
-    python_ta.check_all(config={
-        'max-line-length': 120,
-        'disable': ['E1136'],
-        'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot'],
-        'allowed-io': ['load_review_graph'],
-        'max-nested-blocks': 4
-    })
+# if __name__ == '__main__':
+#     import python_ta
+#
+#     python_ta.check_all(config={
+#         'max-line-length': 120,
+#         'disable': ['E1136'],
+#         'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot'],
+#         'allowed-io': ['load_review_graph'],
+#         'max-nested-blocks': 4
+#     })
 
     # s = ShortestActorGraph('small_data_files/small_db.db')
     # p = s.get_path(s.get_actor_id('Keanu Reeves'), s.get_actor_id('Cillian Murphy'))
