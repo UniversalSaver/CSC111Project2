@@ -7,5 +7,5 @@ import gui_interface
 
 if __name__ == '__main__':
     #TODO something to do with choosing the data? im not sure
-    app = gui_interface.App("small_data_files/small database.db")
+    app = gui_interface.App("./data_files/actors_and_movies.db")
     app.run()
