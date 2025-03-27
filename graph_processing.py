@@ -305,7 +305,7 @@ class ShortestActorGraph(ActorGraph):
                     if adjacent == actor2:
                         return curr_path + [adjacent]
 
-                    # Check Neighbours
+                    # Check Neighbours that are not checked
                     if adjacent not in visited:
 
                         # Check for alive/dead if applicable:
@@ -342,7 +342,7 @@ class ShortestActorGraph(ActorGraph):
                         # Mark node as checked
                         visited.add(adjacent)
 
-                        # Search this node if s
+                        # Search this node if checks are good
                         if check_alive and check_release_date:
                             queue.append(curr_path + [adjacent])
 
