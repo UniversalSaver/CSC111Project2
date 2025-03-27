@@ -168,21 +168,31 @@ class ActorGraph:
                 else:
                     return response[0][0]
             else:
+                played_in = cursor.execute("""
+                        SELECT id FROM movie WHERE title = ?
+                """, (played_in,)).fetchall()
+
+                if len(played_in) == 0:
+                    cursor.close()
+                    return ''
+
                 list_of_actors = cursor.execute("""
                 SELECT id FROM actor WHERE name = ?
                 """, (actor_name,)).fetchall()
 
                 for actor in list_of_actors:
                     movies_played_in = cursor.execute("""
-                    SELECT movie_id FROM edge WHERE actor_id = ?
-                    """, (actor[0],)).fetchall()
+                    SELECT connections FROM edge WHERE object_id = ?
+                    """, (actor[0],)).fetchone()
 
-                    for movie in movies_played_in:
-                        if played_in == cursor.execute("""
-                        SELECT title FROM movie WHERE id = ?
-                        """, (movie[0],)).fetchone()[0]:
-                            cursor.close()
-                            return actor[0]
+                    if movies_played_in is None:
+                        continue
+
+                    movies_played_in = movies_played_in[0].split(',')
+
+                    if any(possible_played_in[0] in movies_played_in for possible_played_in in played_in):
+                        cursor.close()
+                        return actor[0]
 
             cursor.close()
             return ''
@@ -286,7 +296,7 @@ class ShortestActorGraph(ActorGraph):
                     queue.append(curr_path + [adjacent])
 
         return []
-    
+
     def check_alive_helper(self, check_is_alive_helper, alive_status_helper) -> bool:
         # If actor is dead and we want alive nodes:
         if alive_status_helper == "\\N":
@@ -297,7 +307,7 @@ class ShortestActorGraph(ActorGraph):
             if check_is_alive_helper.lower() == "dead":
                 return False
         return True
-    
+
     def check_release_date_helper(self, release_date: int, released_before: int, released_after: int) -> bool:
         # If movie was outside of given range:
         if release_date is None or release_date < released_after or release_date > released_before:
@@ -349,7 +359,7 @@ class ShortestActorGraph(ActorGraph):
                         if check_is_alive != "" and adjacent[:2] == "nm":
                             # SQL Fetch deathYear
                             cursor.execute("SELECT deathYear FROM actor WHERE id = ?", (adjacent,))
-                            alive_status = cursor.fetchone() 
+                            alive_status = cursor.fetchone()
                             check_alive = self.check_alive_helper(check_alive, alive_status)
 
                         # Check for movie released before/after a certain year:
