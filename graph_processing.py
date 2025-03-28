@@ -327,7 +327,7 @@ class ShortestActorGraph:
         connection.close()
         return satisfied_requirements
 
-    def get_restricted_path(self, actor1: str, actor2: str, check_is_alive: str = "", released_before: int = 9999, released_after: int = 0) -> list[str]:
+    def get_restricted_path(self, actor1: str, actor2: str, check_is_alive: str = "Any", released_before: int = 9999, released_after: int = 0) -> list[str]:
         """
         Given two actor IDs, return the shortest path between the two as a list of actors/movies with the following restrictions:
 

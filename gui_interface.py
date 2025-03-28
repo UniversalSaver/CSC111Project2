@@ -1,16 +1,8 @@
 """
-Module Description
-==================
-A file with functions for creating the window which the user will use. Uses tkinter.
-The buttons make calls to functions in graph_processing.py.
+A file with functions for creating the window which the user will use. Will use tkinter. The buttons will make calls
+to functions in graph_processing.py
 
-Copyright and Usage Information
-===============================
-This file is solely provided for the use in grading and review of the named student's
-work by the TAs and Professors of CSC111. All further distribution of this code whether
-as is or modified is firmly prohibited.
-
-This file is Copyright (c) Nabhan Rashid, Danny Tran, and Tai Poole
+# TODO - add copyright
 """
 import time
 from tkinter.font import Font
@@ -23,6 +15,28 @@ import networkx as nx
 import graph_processing as gp
 
 
+class Memory():
+    '''
+    A class to represent the memory of the program.
+    Contains a collection of pointers to dynamic widgets. Wrapper class.
+
+    Instance Attributes:
+        dbg: text widget for the dbg frame
+        graph: label widget for the graph frame
+        canvas: canvas widget for the graph frame
+        fig: figure widget for the graph frame
+    '''
+    dbg: Text | None
+    graph: Label | None
+    canvas: FigureCanvasTkAgg | None
+    fig: Figure | None
+
+    def __init__(self) -> None:
+        self.dbg = None
+        self.graph = None
+        self.canvas = None
+        self.fig = None
+
 class App():
     '''
     A class to represent the GUI for the user to interact with the program.
@@ -31,24 +45,18 @@ class App():
         root: the main window of the application
         font: the font to be used in the application
         dimensions: the dimensions of the window (found during init, depend on screen size)
-        type: stores an item that holds the type of search to be done
         names: a list of 2 items that hold the names of the actors to be searched
-        status_window: the place in the window that holds the text box (lock/unlock purposes)
-        actor_window: the place in the window that holds the actor image
+        filters: a list of items that hold the filters to be applied to the search
         db_path: the path to the database file
-        canvas: the canvas to draw the graph on (memory purposes)
-        figure: the figure to draw the graph on (memory purposes)
+        mem: memory object, holds important widgets
     '''
     root: Tk
     font: Font
     dimensions: tuple[int, int]
-    type: StringVar
     names: list[StringVar]
-    status_window: Text
-    graph_window: Label
+    filters: list[StringVar]
     db_path: str
-    canvas: FigureCanvasTkAgg
-    figure: Figure
+    mem: Memory
 
     def __init__(self, path: str) -> None:
         self.root = Tk()
@@ -62,6 +70,7 @@ class App():
         self.font = Font(family="Apple Symbols", size=15)  # shouldve been comic sans -T
         self.db_path = path
         self.names = []
+        self.filters = []
 
         self.init_input(self.root)
         self.init_display(self.root)
@@ -105,11 +114,13 @@ class App():
         Initializes the field frame (bottom left side of the window)
         '''
         field_frame = Frame(input_frame, bd=15, bg="#ced4da")
+        search_button = Button(input_frame, bg="#ced4da", bd=0, command=self.doTheThing, font=self.font, text="Go!")
 
         self.init_name1(field_frame)
         self.init_name2(field_frame)
-        self.init_search(field_frame)
+        self.init_filters(field_frame)
 
+        search_button.pack(side=tk.BOTTOM, expand=True, fill=tk.BOTH)
         field_frame.pack(fill=tk.BOTH, expand=True)
 
     def init_name1(self, field_frame: Frame) -> None:
@@ -138,24 +149,51 @@ class App():
         name2_label.pack()
         name2_input.pack()
 
-    def init_search(self, field_frame: Frame) -> None:
+    def init_filters(self, field_frame: Frame) -> None:
         '''
         Initializes the search input frame, including search type and search button
         '''
         search_frame = Frame(field_frame, bd=15, bg="#ced4da")
-        dropdown_frame = Frame(search_frame, bd=15, bg="#ced4da")
-        search_label = Label(dropdown_frame, bg="#ced4da", fg="#495057", font=self.font, text="Search type: ")
-        self.type = StringVar(self.root)
-        self.type.set("Fast")
-        type_box = OptionMenu(dropdown_frame, self.type, "Fast", "Short")
-        type_box.config(bg="#ced4da", fg="#495057")
-        search_button = Button(search_frame, bg="#ced4da", bd=0, command=self.doTheThing, font=self.font, text="Go!")
+        search_label = Label(search_frame, bg="#ced4da", fg="#495057", font=self.font, text="Additional filters: ")
 
+
+        search_label.pack(side=tk.TOP)
+
+        self.init_filter_dropdown(search_frame)
+        self.init_filter_input(search_frame)
         search_frame.pack(expand=True)
-        dropdown_frame.pack(side=tk.LEFT)
-        search_label.pack()
+
+
+    def init_filter_dropdown(self, search_frame: Frame) -> None:
+        '''
+        Initializes the first filter input frame
+        '''
+        filter1_frame = Frame(search_frame, bd=15, bg="#ced4da")
+        filter1_label = Label(filter1_frame, bg="#ced4da", fg="#495057", font=self.font, text="Living status: ")
+        filter1 = StringVar(self.root)
+        filter1.set(" ")
+        self.filters.append(filter1)
+        type_box = OptionMenu(filter1_frame, self.filters[0], "Any", "Alive", "Deceased")
+        type_box.config(bg="#ced4da", fg="#495057")
+
+        filter1_frame.pack(side=tk.LEFT, expand=True)
+        filter1_label.pack()
         type_box.pack()
-        search_button.pack(side=tk.RIGHT)
+
+    def init_filter_input(self, search_frame: Frame) -> None:
+        '''
+        Initializes the first filter input frame
+        '''
+        filter2_frame = Frame(search_frame, bd=15, bg="#ced4da")
+        filter2_label = Label(filter2_frame, bg="#ced4da", fg="#495057", font=self.font, text="Released After: ")
+        filter2 = StringVar(self.root)
+        filter2.set(" ")
+        self.filters.append(filter2)
+        input_box = Entry(filter2_frame, textvariable=self.filters[0], fg="#495057")
+
+        filter2_frame.pack(side=tk.RIGHT, expand=True)
+        filter2_label.pack()
+        input_box.pack()
 
     def init_display(self, main_frame: Tk) -> None:
         '''
