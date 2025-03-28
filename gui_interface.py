@@ -202,7 +202,7 @@ class App():
         filter2_frame = Frame(search_frame, bd=15, bg="#ced4da")
         filter2_label = Label(filter2_frame, bg="#ced4da", fg="#495057", font=self.font, text="Released After: ")
         filter2 = StringVar(self.root)
-        filter2.set("2006")
+        filter2.set("0")
         self.filters.append(filter2)
         input_box = Entry(filter2_frame, textvariable=self.filters[1])
 
@@ -301,7 +301,7 @@ class App():
         # DO NOT TOUCH ANYTHING IT HAS DRIVEN ME MAD ON THE ROCKS
         self.mem.canvas.get_tk_widget().pack_forget()
         plt.close(self.mem.fig)
-        graph_w, graph_h = self.dimensions[0] * 2 / 3 - 30, self.dimensions[1] * 8 / 9 - 30
+        graph_w, graph_h = self.dimensions[0] * 2 / 3 - 30, self.dimensions[1] * 10 / 11 - 30
         self.mem.fig = Figure(figsize=(graph_w / 100, graph_h / 100), dpi=100)
         plot = self.mem.fig.add_axes((0, 0, 1, 1))
         plot.axis('off')
@@ -321,12 +321,13 @@ class App():
 
 
 if __name__ == "__main__":
-    import python_ta
+    #import python_ta
 
-    python_ta.check_all(config={
-        'max-line-length': 120,
-        'disable': ['E1136'],
-        'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot'],
-        'allowed-io': ['load_review_graph'],
-        'max-nested-blocks': 4
-    })
+    #python_ta.check_all(config={
+    #    'max-line-length': 120,
+    #    'disable': ['E1136'],
+    #    'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot'],
+    #    'allowed-io': ['load_review_graph'],
+    #    'max-nested-blocks': 4
+    #})
+    print("This is the wrong file. Please run main.py")
