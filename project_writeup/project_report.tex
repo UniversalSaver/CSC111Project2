@@ -63,6 +63,16 @@ These can be found through PyCharm, so we do not believe they require special in
 
 Upon running this program, you can expect to see a new window open (You might have to click it from the taskbar) with intractable boxes on the left, and an empty space for the graph on the right. To start with, we recommend choosing two actors without any restrictions, just to get the hang of the program. Type their names in within the given space, then click \verb+Go!+ After getting used to it, you can add restrictions, perhaps find a path with movies only made after 2000, or a path between two dead actors.
 
+\section{Changes to the Project Plan}
+One of the biggest changes to our project plan was our decision to use an SQL graph database instead of a \verb!networkx! graph. We also decided to add onto our plan the restrictions, specifically restrictions on age to further our goal of finding out if we can \emph{modernize} the Kevin Bacon number.
+
+\section{Discussion}
+We did manage to find out the Kevin Bacon Theory is most likely correct. From our testing, we couldn't find a degree greater than 4, despite our best efforts to find the most obscure actors we could. We couldn't quite accomplish our second goal, to modernize the Kevin Bacon number, as adding restrictions steeply increases processing time. This did prove a point though, old actors and their movies often make up the backbone of a path between actors, as without them the path quickly becomes too long to follow.
+
+Some struggles we came to were mostly to do with speed and the UI. 
+
+When it came to speed, we didn't want to budge on the SQL network, because the trade-off would be RAM. As such we tried out different ideas with the \verb!schema!. Things like double indexing the tables, or changing the index we refer to, and we actually started off with a adjacency matrix for the edge table, because that's how the database (\verb!title.principals.tsv.gz!) came. At first we were indexing once over both ends of the edge (An \verb!actor_id! and a \verb!movie_id!), but after doing some heavy research into SQL, we realized it would be faster to index both the ends separately. Finally, we realized if we sacrificed some pre-processing time (about 5 minutes), we could instead use an adjacency list, that was significantly faster than anything else we'd tried before, and it's what allowed us to scale to the entire movie database when we used to only use a tenth!
+
 \section{Bibliography}
 
 (1) “Six Degrees of Kevin Bacon.” Wikipedia, https://en.wikipedia.org/wiki/Six\_Degrees\_of\_Kevin\_Bacon. Accessed 1 March 2025.\\\\
