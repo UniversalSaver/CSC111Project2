@@ -232,7 +232,7 @@ class ShortestActorGraph:
         Returns a list of valid actors based on the restrictions given
 
         Preconditions:
-            - is_alive.lower() in ["alive", "dead", ""]
+            - is_alive.lower() in ["alive", "deceased", ""]
         """
         with sql.connect(self._db_path) as connection:
             cursor = connection.cursor()
@@ -241,7 +241,7 @@ class ShortestActorGraph:
                 return cursor.execute("""
                             SELECT name FROM actor WHERE deathYear = '\\N'
                     """).fetchall()
-            elif is_alive == 'dead':
+            elif is_alive == 'deceased':
                 return cursor.execute("""
                             SELECT name FROM actor WHERE deathYear != '\\N'
                     """).fetchall()
@@ -292,7 +292,7 @@ class ShortestActorGraph:
                 return False
         # If actor is alive and we want dead nodes:
         else:
-            if check_is_alive_helper.lower() == "dead":
+            if check_is_alive_helper.lower() == "deceased":
                 return False
         return True
 
@@ -316,7 +316,7 @@ class ShortestActorGraph:
         Return an empty list if no such path exists.
 
         Preconditions:
-            - is_alive.lower() in ["alive", "dead", ""]
+            - is_alive.lower() in ["alive", "deceased", ""]
         """
         if actor1 == actor2:
             return [actor1]

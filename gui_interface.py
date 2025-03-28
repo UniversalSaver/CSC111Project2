@@ -101,9 +101,9 @@ class App():
         Initializes the info frame (top left side of the window)
         '''
         info_frame = Frame(input_frame, bg="#adb5bd", bd=15)
-        title = Label(info_frame, font=self.font, bg="#adb5bd", fg="#343a40", wraplength=(self.dimensions[0] / 3) - 70, justify=tk.CENTER,
+        title = Label(info_frame, font=self.font, bg="#adb5bd", fg="#343a40", wraplength=(self.dimensions[0] / 3) - 60, justify=tk.CENTER,
                           text="The really cool connected thing TODO NAME")
-        description = Label(info_frame, font=self.font, bg="#adb5bd", fg="#343a40", wraplength=(self.dimensions[0] / 3) - 70, justify=tk.CENTER,
+        description = Label(info_frame, font=self.font, bg="#adb5bd", fg="#343a40", wraplength=(self.dimensions[0] / 3) - 60, justify=tk.CENTER,
                                 text="This is a really cool thing that will connect actors to movies. she kevin on my bacon till i 6 degrees or less")
         info_frame.pack(side=tk.TOP, fill=tk.BOTH)
         title.pack(side=tk.TOP)
@@ -171,14 +171,14 @@ class App():
         filter1_frame = Frame(search_frame, bd=15, bg="#ced4da")
         filter1_label = Label(filter1_frame, bg="#ced4da", fg="#495057", font=self.font, text="Living status: ")
         filter1 = StringVar(self.root)
-        filter1.set(" ")
+        filter1.set("Any")
         self.filters.append(filter1)
         type_box = OptionMenu(filter1_frame, self.filters[0], "Any", "Alive", "Deceased")
         type_box.config(bg="#ced4da", fg="#495057")
 
         filter1_frame.pack(side=tk.LEFT, expand=True)
         filter1_label.pack()
-        type_box.pack()
+        type_box.pack(expand=True, fill=tk.BOTH)
 
     def init_filter_input(self, search_frame: Frame) -> None:
         '''
@@ -187,9 +187,9 @@ class App():
         filter2_frame = Frame(search_frame, bd=15, bg="#ced4da")
         filter2_label = Label(filter2_frame, bg="#ced4da", fg="#495057", font=self.font, text="Released After: ")
         filter2 = StringVar(self.root)
-        filter2.set(" ")
+        filter2.set("2006")
         self.filters.append(filter2)
-        input_box = Entry(filter2_frame, textvariable=self.filters[0], fg="#495057")
+        input_box = Entry(filter2_frame, textvariable=self.filters[1])
 
         filter2_frame.pack(side=tk.RIGHT, expand=True)
         filter2_label.pack()
@@ -209,7 +209,7 @@ class App():
         '''
         Initializes the debug frame, for displaying the status of the search
         '''
-        dbg_frame = Frame(display_frame, bg="#adb5bd", bd=15, height=self.dimensions[1] * 1 / 9, width=self.dimensions[0] * 2 / 3)
+        dbg_frame = Frame(display_frame, bg="#adb5bd", bd=15, height=self.dimensions[1] * 1 / 11, width=self.dimensions[0] * 2 / 3)
         self.status_window = Text(dbg_frame, font=self.font)
         self.status_window.insert(tk.END, "")
         self.status_window.config(state=tk.DISABLED)
@@ -231,7 +231,11 @@ class App():
 
     def doTheThing(self) -> None:
         name1, name2 = self.names[0].get(), self.names[1].get()
-        search_type = self.type.get()
+        is_alive, released_after = self.filters[0].get(), self.filters[1].get()
+        try:
+            released_after = int(released_after)
+        except ValueError:
+            released_after = 0
         self.status_window.config(state=tk.NORMAL)
         self.status_window.delete('1.0', tk.END)
         self.status_window.insert(tk.END, "Searching...")
@@ -241,7 +245,7 @@ class App():
         start_time = time.time()
         id1, id2 = g.get_actor_id(name1), g.get_actor_id(name2)
         if id1 != "" and id2 != "":
-            path = g.get_path(id1, id2) #change for connection type?
+            path = g.get_restricted_path(id1, id2, is_alive, released_after=released_after)
             if len(path) > 0:
                 info = g.make_networkx_graph(path)
                 wait = round(time.time() - start_time, 3)
@@ -250,7 +254,7 @@ class App():
                 self.status_window.delete('1.0', tk.END)
                 d = int((len(path) - 1) / 2)
                 p = "s" if d != 1 else ""
-                msg = f"Found {search_type} connection in {wait} seconds and {d} degree{p} of seperation"
+                msg = f"Found a connection in {wait} seconds and {d} degree{p} of seperation"
                 self.status_window.insert(tk.END, msg)
                 self.status_window.config(state=tk.DISABLED)
                 self.render(info)
