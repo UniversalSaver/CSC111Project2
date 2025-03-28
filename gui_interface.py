@@ -6,8 +6,7 @@ to functions in graph_processing.py
 """
 import time
 from tkinter.font import Font
-from tkinter import Tk, Frame, Label, Button, OptionMenu, Text, StringVar, PhotoImage, Entry
-from tkinter import ttk
+from tkinter import Tk, Frame, Label, Button, OptionMenu, Text, StringVar, Entry
 import tkinter as tk
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
@@ -38,7 +37,7 @@ class App():
     type: StringVar
     names: list[StringVar]
     status_window: Text
-    actor_window: Label
+    graph_window: Label
     db_path: str
     canvas: FigureCanvasTkAgg
     figure: Figure
@@ -57,10 +56,10 @@ class App():
         self.names = []
 
         self.init_input(self.root)
-        self.init_actor(self.root)
+        self.init_display(self.root)
 
         self.figure = Figure(figsize=(20, 20), dpi=100)
-        self.canvas = FigureCanvasTkAgg(self.figure, master=self.actor_window)
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self.graph_window)
 
     def run(self) -> None:
         '''
@@ -85,9 +84,9 @@ class App():
         Initializes the info frame (top left side of the window)
         '''
         info_frame = Frame(input_frame, bg="#adb5bd", bd=15)
-        title = Label(info_frame, font=self.font, bg="#adb5bd", wraplength=(self.dimensions[0] / 3) - 70, justify=tk.CENTER,
+        title = Label(info_frame, font=self.font, bg="#adb5bd", fg="#343a40", wraplength=(self.dimensions[0] / 3) - 70, justify=tk.CENTER,
                           text="The really cool connected thing TODO NAME")
-        description = Label(info_frame, font=self.font, bg="#adb5bd", wraplength=(self.dimensions[0] / 3) - 70, justify=tk.CENTER,
+        description = Label(info_frame, font=self.font, bg="#adb5bd", fg="#343a40", wraplength=(self.dimensions[0] / 3) - 70, justify=tk.CENTER,
                                 text="This is a really cool thing that will connect actors to movies. she kevin on my bacon till i 6 degrees or less")
         info_frame.pack(side=tk.TOP, fill=tk.BOTH)
         title.pack(side=tk.TOP)
@@ -102,7 +101,6 @@ class App():
         self.init_name1(field_frame)
         self.init_name2(field_frame)
         self.init_search(field_frame)
-        self.init_dbg(field_frame)
 
         field_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -151,29 +149,39 @@ class App():
         type_box.pack()
         search_button.pack(side=tk.RIGHT)
 
-    def init_dbg(self, field_frame: Frame) -> None:
+    def init_display(self, main_frame: Tk) -> None:
+        '''
+        Initializes the display frame (right side of window)
+        '''
+        display_frame = Frame(main_frame, bg="#f8f9fa", bd=15)
+        self.init_graph(display_frame)
+        self.init_dbg(display_frame)
+
+        display_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+
+    def init_dbg(self, display_frame: Frame) -> None:
         '''
         Initializes the debug frame, for displaying the status of the search
         '''
-        dbg_frame = Frame(field_frame, bg="#adb5bd", bd=15)
+        dbg_frame = Frame(display_frame, bg="#adb5bd", bd=15, height=self.dimensions[1] * 1 / 9, width=self.dimensions[0] * 2 / 3)
         self.status_window = Text(dbg_frame, font=self.font)
         self.status_window.insert(tk.END, "")
         self.status_window.config(state=tk.DISABLED)
 
-        dbg_frame.pack()
-        self.status_window.pack()
+        dbg_frame.pack(side=tk.BOTTOM)
+        self.status_window.pack(fill=tk.BOTH, expand=True)
+        dbg_frame.pack_propagate(False)
 
-    def init_actor(self, main_frame: Tk) -> None:
+    def init_graph(self, display_frame: Frame) -> None:
         '''
-        Initializes the actor frame (right side of window)
+        Initializes the graph frame (top right side of the window)
         '''
-        global angryBaby
-        angryBaby = PhotoImage(file="angrybaby.png")
-        actor_frame = Frame(main_frame, bg="#f8f9fa")
-        self.actor_window = Label(actor_frame, image=angryBaby)
-        self.actor_window.pack(expand=True)
+        graph_frame = Frame(display_frame, bg="#f8f9fa")
+        self.graph_window = Label(graph_frame, fg="#495057", bg="#f8f9fa", font=self.font, text="Graph goes here")
+        self.graph_window.pack(expand=True)
 
-        actor_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        graph_frame.pack(side=tk.TOP, expand=True)
+        self.graph_window.pack(fill=tk.BOTH, expand=True)
 
     def doTheThing(self) -> None:
         name1, name2 = self.names[0].get(), self.names[1].get()
@@ -196,7 +204,7 @@ class App():
                 self.status_window.delete('1.0', tk.END)
                 d = int((len(path) - 1) / 2)
                 p = "s" if d != 1 else ""
-                msg = f"Found {search_type} connection in \n{wait} seconds and \n{d} degree{p} of seperation"
+                msg = f"Found {search_type} connection in {wait} seconds and {d} degree{p} of seperation"
                 self.status_window.insert(tk.END, msg)
                 self.status_window.config(state=tk.DISABLED)
                 self.render(info)
@@ -219,7 +227,8 @@ class App():
         # DO NOT TOUCH ANYTHING IT HAS DRIVEN ME MAD ON THE ROCKS
         self.canvas.get_tk_widget().pack_forget()
         plt.close(self.figure)
-        self.figure = Figure(figsize=(20, 20), dpi=100)
+        graph_w, graph_h = self.dimensions[0] * 2 / 3 - 30, self.dimensions[1] * 8 / 9 - 30
+        self.figure = Figure(figsize=(graph_w / 100, graph_h / 100), dpi=100)
         plot = self.figure.add_axes((0, 0, 1, 1))
         plot.axis('off')
         pos = nx.kamada_kawai_layout(info)
@@ -232,7 +241,7 @@ class App():
         padding = 0.05 * max(x_span, y_span)
         plot.set_xlim(x_min - padding, x_max + padding)
         plot.set_ylim(y_min - padding, y_max + padding)
-        self.canvas = FigureCanvasTkAgg(self.figure, master=self.actor_window)
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self.graph_window)
         self.canvas.draw()
         self.canvas.get_tk_widget().pack()
 
