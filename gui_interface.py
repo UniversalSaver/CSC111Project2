@@ -31,17 +31,20 @@ class Memory():
         graph: label widget for the graph frame
         canvas: canvas widget for the graph frame
         fig: figure widget for the graph frame
+        g: the graph object. here for storage :)
     '''
     dbg: Text | None
     graph: Label | None
     canvas: FigureCanvasTkAgg | None
     fig: Figure | None
+    g: gp.ShortestActorGraph | None
 
     def __init__(self) -> None:
         self.dbg = None
         self.graph = None
         self.canvas = None
         self.fig = None
+        self.g = None
 
 class App():
     '''
@@ -83,6 +86,7 @@ class App():
 
         self.figure = Figure(figsize=(20, 20), dpi=100)
         self.canvas = FigureCanvasTkAgg(self.figure, master=self.graph_window)
+        self.g = gp.ShortestActorGraph(self.db_path)
 
     def run(self) -> None:
         '''
@@ -246,14 +250,13 @@ class App():
         self.status_window.delete('1.0', tk.END)
         self.status_window.insert(tk.END, "Searching...")
         self.status_window.config(state=tk.DISABLED)
-        g = gp.ShortestActorGraph(self.db_path)
-
+        self.status_window.update()
+        id1, id2 = self.g.get_actor_id(name1), self.g.get_actor_id(name2)
         start_time = time.time()
-        id1, id2 = g.get_actor_id(name1), g.get_actor_id(name2)
         if id1 != "" and id2 != "":
-            path = g.get_restricted_path(id1, id2, is_alive, released_after=released_after)
+            path = self.g.get_restricted_path(id1, id2, is_alive, released_after=released_after)
             if len(path) > 0:
-                info = g.make_networkx_graph(path)
+                info = self.g.make_networkx_graph(path)
                 wait = round(time.time() - start_time, 3)
 
                 self.status_window.config(state=tk.NORMAL)

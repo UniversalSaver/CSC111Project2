@@ -325,7 +325,7 @@ class ShortestActorGraph:
         if node_id[0:2] == 'nm':
             death_state = cursor.execute("""SELECT deathYear FROM actor WHERE id = ?""", (node_id,)).fetchone()[0]
 
-            satisfied_requirements = (death_state == "\\N") == (want_alive.lower() == "alive")
+            satisfied_requirements = (death_state == "\\N") == (want_alive.lower() == "alive" or want_alive.lower() == "any")
         else:
             release_year = cursor.execute("""SELECT startYear FROM movie WHERE id = ?""", (node_id,)).fetchone()[0]
 
