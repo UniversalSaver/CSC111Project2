@@ -22,7 +22,7 @@ import graph_processing as gp
 
 
 class Memory():
-    '''
+    """
     A class to represent the memory of the program.
     Contains a collection of pointers to dynamic widgets. Wrapper class.
 
@@ -32,7 +32,7 @@ class Memory():
         canvas: canvas widget for the graph frame
         fig: figure widget for the graph frame
         g: the graph object. here for storage :)
-    '''
+    """
     dbg: Text
     graph: Label
     canvas: FigureCanvasTkAgg
@@ -48,7 +48,7 @@ class Memory():
 
 
 class App():
-    '''
+    """
     A class to represent the GUI for the user to interact with the program.
 
     Instance Attributes:
@@ -59,7 +59,7 @@ class App():
         filters: a list of items that hold the filters to be applied to the search
         db_path: the path to the database file
         mem: memory object, holds important widgets
-    '''
+    """
     root: Tk
     font: Font
     dimensions: tuple[int, int]
@@ -91,15 +91,15 @@ class App():
         self.mem = Memory((dbg, graph, canvas, fig, g))
 
     def run(self) -> None:
-        '''
+        """
         Runs the application
-        '''
+        """
         self.root.mainloop()
 
     def init_input(self, main_frame: Tk) -> None:
-        '''
+        """
         Initializes the input frame (left side of the window)
-        '''
+        """
         input_frame = Frame(main_frame, bg="#dee2e6", relief='raised', bd=15, width=self.dimensions[0] / 3)
 
         self.init_info(input_frame)
@@ -109,9 +109,9 @@ class App():
         input_frame.pack_propagate(False)
 
     def init_info(self, input_frame: Frame) -> None:
-        '''
+        """
         Initializes the info frame (top left side of the window)
-        '''
+        """
         info_frame = Frame(input_frame, bg="#adb5bd", bd=15)
         title = Label(info_frame, font=self.font, bg="#adb5bd", fg="#343a40", wraplength=(self.dimensions[0] / 3) - 60,
                       justify=tk.CENTER, text=str("Welcome to the Hollywood connection finder"
@@ -126,9 +126,9 @@ class App():
         description.pack(side=tk.TOP)
 
     def init_field(self, input_frame: Frame) -> None:
-        '''
+        """
         Initializes the field frame (bottom left side of the window)
-        '''
+        """
         field_frame = Frame(input_frame, bd=15, bg="#ced4da")
         search_button = Button(input_frame, bg="#ced4da", bd=0,
                                command=self.find_connection, font=self.font, text="Go!")
@@ -141,9 +141,9 @@ class App():
         field_frame.pack(fill=tk.BOTH, expand=True)
 
     def init_name1(self, field_frame: Frame) -> None:
-        '''
+        """
         Initializes the first name input frame
-        '''
+        """
         name1_frame = Frame(field_frame, bd=15, bg="#ced4da")
         name1_label = Label(name1_frame, bg="#ced4da", fg="#495057", font=self.font, text="Starting actor's name: ")
         self.names.append(StringVar(self.root))
@@ -154,9 +154,9 @@ class App():
         name1_input.pack()
 
     def init_name2(self, field_frame: Frame) -> None:
-        '''
+        """
         Initializes the second name input frame
-        '''
+        """
         name2_frame = Frame(field_frame, bd=15, bg="#ced4da")
         name2_label = Label(name2_frame, bg="#ced4da", fg="#495057", font=self.font, text="Ending actor's name: ")
         self.names.append(StringVar(self.root))
@@ -167,9 +167,9 @@ class App():
         name2_input.pack()
 
     def init_filters(self, field_frame: Frame) -> None:
-        '''
+        """
         Initializes the search input frame, including search type and search button
-        '''
+        """
         search_frame = Frame(field_frame, bd=15, bg="#ced4da")
         search_label = Label(search_frame, bg="#ced4da", fg="#495057", font=self.font, text="Additional filters: ")
 
@@ -180,9 +180,9 @@ class App():
         search_frame.pack(expand=True)
 
     def init_filter_dropdown(self, search_frame: Frame) -> None:
-        '''
+        """
         Initializes the first filter input frame
-        '''
+        """
         filter1_frame = Frame(search_frame, bd=15, bg="#ced4da")
         filter1_label = Label(filter1_frame, bg="#ced4da", fg="#495057", font=self.font, text="Living status: ")
         filter1 = StringVar(self.root)
@@ -196,9 +196,9 @@ class App():
         type_box.pack(expand=True, fill=tk.BOTH)
 
     def init_filter_input(self, search_frame: Frame) -> None:
-        '''
+        """
         Initializes the first filter input frame
-        '''
+        """
         filter2_frame = Frame(search_frame, bd=15, bg="#ced4da")
         filter2_label = Label(filter2_frame, bg="#ced4da", fg="#495057", font=self.font, text="Released After: ")
         filter2 = StringVar(self.root)
@@ -211,9 +211,9 @@ class App():
         input_box.pack()
 
     def init_display(self, main_frame: Tk) -> tuple[Text, Label]:
-        '''
+        """
         Initializes the display frame (right side of window)
-        '''
+        """
         display_frame = Frame(main_frame, bg="#f8f9fa", bd=15)
         graph = self.init_graph(display_frame)
         dbg = self.init_dbg(display_frame)
@@ -222,9 +222,9 @@ class App():
         return (dbg, graph)
 
     def init_dbg(self, display_frame: Frame) -> Text:
-        '''
+        """
         Initializes the debug frame, for displaying the status of the search
-        '''
+        """
         dbg_frame = Frame(display_frame, bg="#adb5bd", bd=15,
                           height=self.dimensions[1] * 1 / 11, width=self.dimensions[0] * 2 / 3)
         dbg = Text(dbg_frame, font=self.font)
@@ -238,9 +238,9 @@ class App():
         return dbg
 
     def init_graph(self, display_frame: Frame) -> Label:
-        '''
+        """
         Initializes the graph frame (top right side of the window)
-        '''
+        """
         graph_frame = Frame(display_frame, bg="#f8f9fa")
         graph = Label(graph_frame, fg="#495057", bg="#f8f9fa", font=self.font, text="Graph goes here")
         graph.pack(expand=True)
@@ -251,10 +251,10 @@ class App():
         return graph
 
     def find_connection(self) -> None:
-        '''
+        """
         Finds the connection between two actors, and displays it on the graph window.
         Uses graph_processing for the backend
-        '''
+        """
         name1, name2 = self.names[0].get(), self.names[1].get()
         is_alive, released_after = self.filters[0].get(), self.filters[1].get()
         try:
@@ -268,8 +268,12 @@ class App():
         self.mem.dbg.update()
         id1, id2 = self.mem.g.get_actor_id(name1), self.mem.g.get_actor_id(name2)
         start_time = time.time()
-        if id1 != "" and id2 != "":
-            path = self.mem.g.get_restricted_path(id1, id2, is_alive, released_after=released_after)
+        if id1[0:2] == "nm" and id2[0:2] == "nm":
+            # I'd like to note that 1888 is the oldest "movie" in the processed data set. Though it's a book?
+            if is_alive == 'Any' and released_after < 1888:
+                path = self.mem.g.get_path(id1, id2)
+            else:
+                path = self.mem.g.get_restricted_path(id1, id2, is_alive, released_after=released_after)
             if len(path) > 0:
                 info = self.mem.g.make_networkx_graph(path)
                 wait = round(time.time() - start_time, 3)
@@ -290,14 +294,19 @@ class App():
         else:
             self.mem.dbg.config(state=tk.NORMAL)
             self.mem.dbg.delete('1.0', tk.END)
-            self.mem.dbg.insert(tk.END,
-                                f"Sorry, actor {name1 if id1 == "" else name2 if id2 == "" else ""} not found")
+            if id1 == "tm":
+                self.mem.dbg.insert(tk.END, f"Sorry, there are too many actors named {name1} ")
+            elif id2 == "tm":
+                self.mem.dbg.insert(tk.END, f"Sorry, there are too many actors named {name2}")
+            else:
+                self.mem.dbg.insert(tk.END,
+                                    f"Sorry, actor {name1 if id1 == "" else name2 if id2 == "" else ""} not found")
             self.mem.dbg.config(state=tk.DISABLED)
 
     def render(self, info: nx.Graph) -> None:
-        '''
+        """
         Renders the graph
-        '''
+        """
         # DO NOT TOUCH ANYTHING IT HAS DRIVEN ME MAD ON THE ROCKS
         self.mem.canvas.get_tk_widget().pack_forget()
         plt.close(self.mem.fig)
@@ -321,13 +330,13 @@ class App():
 
 
 if __name__ == "__main__":
-    #import python_ta
-
-    #python_ta.check_all(config={
+    # import python_ta
+    # python_ta.check_all(config={
     #    'max-line-length': 120,
     #    'disable': ['E1136'],
     #    'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot'],
     #    'allowed-io': ['load_review_graph'],
     #    'max-nested-blocks': 4
-    #})
+    # })
+
     print("This is the wrong file. Please run main.py")

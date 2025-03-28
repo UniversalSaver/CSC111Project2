@@ -31,6 +31,7 @@ class FileFormatError(Exception):
     """
     An error raised during file reading if the format of the file is incorrect
     """
+
     def __str__(self) -> str:
         """
         Return a string representation of this exception
@@ -147,11 +148,12 @@ class ShortestActorGraph:
         If there are multiple of the same actor, then can be given an optional parameter 'played_in' to specify a movie
         the actor has played in.
 
-        Returns an empty string if the actor doesn't exist, or there are more than one actor that fit the description
+        Returns an empty string if the actor doesn't exist, or there are more than one actor that fit the description.
+        If there are more than one actor that fit the description, return 'tm'
 
         >>> a = ShortestActorGraph('data_files/actors_and_movies.db')
         >>> a.get_actor_id('Kevin Bacon')
-        ''
+        'tm'
         >>> a.get_actor_id('Kevin Bacon', 'Space Oddity')
         'nm0000102'
         >>> s = ShortestActorGraph('data_files/actors_and_movies.db')
@@ -166,8 +168,10 @@ class ShortestActorGraph:
                     """, (actor_name,)).fetchall()
 
                 cursor.close()
-                if len(response) != 1:
+                if len(response) == 0:
                     return ''
+                elif len(response) > 1:
+                    return 'tm'
                 else:
                     return response[0][0]
             else:
@@ -208,8 +212,8 @@ class ShortestActorGraph:
         Preconditions:
             - id is a valid actor or movie id
 
-        >>> a = ShortestActorGraph('small_data_files/small_db.db')
-        >>> a.get_adjacent_nodes('nm0000138') == {'tt1375666', 'tt0120338'}
+        >>> a = ShortestActorGraph('data_files/actors_and_movies.db')
+        >>> a.get_adjacent_nodes('nm0000138') == {'tt0101627', 'tt0105156', 'tt0108330', 'tt0108550', 'tt0112461', 'tt0114214', 'tt0114702', 'tt0116999', 'tt0117509', 'tt0119004', 'tt0120338', 'tt0120533', 'tt0120744', 'tt0120744', 'tt0163978', 'tt0217505', 'tt0264464', 'tt0338751', 'tt0407887', 'tt0450259', 'tt0758774', 'tt0959337', 'tt0993846', 'tt11286314', 'tt1130884', 'tt1343092', 'tt1375666', 'tt1433813', 'tt15909214', 'tt1616195', 'tt1663202', 'tt1853728', 'tt21402698', 'tt27330165', 'tt30144839', 'tt32140499', 'tt35891507', 'tt35932445', 'tt5446438', 'tt5537002', 'tt6487156', 'tt7131622', 'tt7251298', 'tt7428530', 'tt8161786', 'tt8430788', 'tt9114472'}
         True
         >>> a.get_adjacent_nodes('tt1375666') == {'nm0000138', 'nm0330687', 'nm0680983', 'nm0913822', 'nm0362766', 'nm2438307', 'nm0614165', 'nm0000297', 'nm0182839', 'nm0000592'}
         True
@@ -259,7 +263,7 @@ class ShortestActorGraph:
         Preconditions:
             - The actors are in the graph
 
-        >>> s = ShortestActorGraph('small_data_files/small_db.db')
+        >>> s = ShortestActorGraph('data_files/actors_and_movies.db')
         >>> s.get_path('nm0000206', 'nm0000138') != []
         True
         """
@@ -285,18 +289,6 @@ class ShortestActorGraph:
 
         return []
 
-
-    def check_alive_helper(self, check_is_alive_helper, alive_status_helper) -> bool:
-        # If actor is dead and we want alive nodes:
-        if alive_status_helper == "\\N":
-            if check_is_alive_helper.lower() == "alive":
-                return False
-        # If actor is alive and we want dead nodes:
-        else:
-            if check_is_alive_helper.lower() == "deceased":
-                return False
-        return True
-
     def match_requirements(self, node_id: str, want_alive: str, want_before: int, want_after: int) -> bool:
         """
         Given a node ID, returns True if that node matches all the necessary requirements.
@@ -305,7 +297,7 @@ class ShortestActorGraph:
         If the node is an actor, then their alive or dead state matches the want_alive.
 
         Preconditions:
-            - node_id is a valid node in the database of self._db_path
+            - node_id is a valid node id in the database of self._db_path
 
         >>> p = ShortestActorGraph('data_files/actors_and_movies.db')
         >>> dead_person = p.get_actor_id('William Courtenay')
@@ -313,6 +305,8 @@ class ShortestActorGraph:
         True
         >>> p.match_requirements(dead_person, 'alive', 9999, 0)
         False
+        >>> p.match_requirements(dead_person, 'Any', 9999, 0)
+        True
         >>> old_movie = 'tt0000675'
         >>> p.match_requirements(old_movie, '', 1990, 0)
         True
@@ -323,25 +317,31 @@ class ShortestActorGraph:
         cursor = connection.cursor()
 
         if node_id[0:2] == 'nm':
-            death_state = cursor.execute("""SELECT deathYear FROM actor WHERE id = ?""", (node_id,)).fetchone()[0]
+            death_state = cursor.execute("""SELECT deathYear FROM actor WHERE id = ?""", (node_id,)).fetchone()
 
-            satisfied_requirements = (death_state == "\\N") == (want_alive.lower() == "alive" or want_alive.lower() == "any")
-        else:
-            release_year = cursor.execute("""SELECT startYear FROM movie WHERE id = ?""", (node_id,)).fetchone()[0]
-
-            if not release_year.isnumeric():
+            if death_state is None:
                 satisfied_requirements = True
             else:
-                satisfied_requirements = want_after < int(release_year) < want_before
+                satisfied_requirements = ((death_state[0] == "\\N") == (want_alive.lower() == "alive")
+                                          or want_alive.lower() == "any")
+        else:
+            release_year = cursor.execute("""SELECT startYear FROM movie WHERE id = ?""", (node_id,)).fetchone()
+
+            if release_year is None or not release_year[0].isnumeric():
+                satisfied_requirements = True
+            else:
+                satisfied_requirements = want_after < int(release_year[0]) < want_before
         # If actor is dead and we want alive nodes:
 
         cursor.close()
         connection.close()
         return satisfied_requirements
 
-    def get_restricted_path(self, actor1: str, actor2: str, check_is_alive: str = "Any", released_before: int = 9999, released_after: int = 0) -> list[str]:
+    def get_restricted_path(self, actor1: str, actor2: str, check_is_alive: str = "Any",
+                            released_before: int = 9999, released_after: int = 0) -> list[str]:
         """
-        Given two actor IDs, return the shortest path between the two as a list of actors/movies with the following restrictions:
+        Given two actor IDs, return the shortest path between the two as a list of actors/movies with the following
+        restrictions:
 
         If specified, only use nodes between alive actors exclusively or dead actors exclusively
 
@@ -381,17 +381,16 @@ class ShortestActorGraph:
 
         return []
 
-# if __name__ == '__main__':
-#     import python_ta
-#
-#     python_ta.check_all(config={
-#         'max-line-length': 120,
-#         'disable': ['E1136'],
-#         'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot'],
-#         'allowed-io': ['load_review_graph'],
-#         'max-nested-blocks': 4
-#     })
 
-    # s = ShortestActorGraph('small_data_files/small_db.db')
-    # p = s.get_path(s.get_actor_id('Keanu Reeves'), s.get_actor_id('Cillian Murphy'))
-    # s.output_graph(p)
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
+
+    import python_ta
+    python_ta.check_all(config={
+        'max-line-length': 120,
+        'disable': ['E1136'],
+        'extra-imports': ['csv', 'networkx', 'sqlite3', 'collections', 'matplotlib.pyplot'],
+        'allowed-io': ['load_review_graph'],
+        'max-nested-blocks': 4
+    })
