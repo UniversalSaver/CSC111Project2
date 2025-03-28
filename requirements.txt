@@ -1,0 +1,4 @@
+# For gui_interface.py. Graph plotting and processing
+networkx==3.4.2
+matplotlib==3.10.1
+scipy==1.15.0
