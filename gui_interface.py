@@ -255,7 +255,7 @@ class App():
         Finds the connection between two actors, and displays it on the graph window.
         Uses graph_processing for the backend
         """
-        name1, name2 = self.names[0].get(), self.names[1].get()
+        name1, name2 = self.names[0].get().title(), self.names[1].get().title()
         is_alive, released_after = self.filters[0].get(), self.filters[1].get()
         try:
             released_after = int(released_after)
