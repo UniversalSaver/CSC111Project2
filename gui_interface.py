@@ -115,7 +115,7 @@ class App():
         info_frame = Frame(input_frame, bg="#adb5bd", bd=15)
         title = Label(info_frame, font=self.font, bg="#adb5bd", fg="#343a40", wraplength=(self.dimensions[0] / 3) - 60,
                       justify=tk.CENTER, text=str("Welcome to the Hollywood connection finder"
-                      "\n(or the baconator if Wendy's allowed it)!\n"))
+                      "\n(or the Baconator if Wendy's allowed it)!\n"))
         description = Label(info_frame, font=self.font, bg="#adb5bd", fg="#343a40",
                             wraplength=(self.dimensions[0] / 3) - 60, justify=tk.CENTER,
                             text="Input two actor names from IMDB (as well as other restrictions), "
