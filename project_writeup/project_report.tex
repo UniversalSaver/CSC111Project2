@@ -1,5 +1,6 @@
 \documentclass{article}
 \usepackage{graphicx} % Required for inserting images
+\usepackage{hyperref}
 
 \title{Exploring Bacon's Law; Actors and their Associates Connected through Film}
 \author{Tai Poole, Nabhan Rashid, Danny Tran}
@@ -28,24 +29,39 @@ The graph itself will be represented as an SQL database. To be more specific, an
 
 \subsection{SQL Database Creation}
 
-The first step in initializing the SQL graph database is compiling the TSV files into an easy-to-access structure. This is the duty of \verb!compile_full_data! which assumes the existence and location of the three TSV files, and uses them to fill the SQL database with the same information, but with random access. The files are read using the \verb!csv! module, changing the delimiter to a tab (\verb!\t!) instead of a comma. Any sqlite database call and insertion is done with the \verb!sql.Connection!, \verb!sql.Connection.commit()!, \verb!sql.Cursor!, and \verb!sql.Cursor.execute! classes and methods.
+The first step in initializing the SQL graph database is compiling the TSV files into an easy-to-access structure. This is the duty of \verb!compile_full_data! which assumes the existence and location of the three TSV files, and uses them to fill the SQL database with the same information, but with random access. The files are read using the \verb!csv! module, changing the delimiter to a tab (\verb!\t!) instead of a comma. Any sqlite database call and insertion is done with the \verb!sql.Connection!, \verb!sql.Connection.commit()!, \verb!sql.Cursor!, and \verb!sql.Cursor.execute()! classes and methods.
 
 This database is then used to compile a graph of actors and movies, with edges where an actor has played a part in a movie. It is in this step of the process where the filtering happens. Within the IMDb database there are many \emph{media} and \emph{people}, but not all of them are movies and actors. There are many TV episodes, directors, camera people, e.t.c. This is why the data is filtered using attributes of the previously created database such as \verb+category+ (see above example of [title.principals.tsv.gz]), and primaryProfession. We also ensure the nodes have helpful attributes, such as startYear for movies and deathYear for actors, which will be used in later processing. It is with this use SQL shows its strength, allowing fast and elegant filtering of data for our use. 
 
-The SQL graph database is made of three tables, one for movies, one for actors, and one for edges. The former two have the above stated attributes, and are indexed by their respective IDs for fast lookup times. The latter is an \verb+adjacency_list+, chosen due to the high amount of queries to what nodes are connected to a specific node (Rather than querying whether two nodes are connected, for which an \verb+adjacency_matrix+ is useful). The edges are between two IDs, and so every row of the table has information on which nodes are connected to a central node. Because the edges are between IDs, this allows for a handy optimization, as the IDs are guaranteed to be unique, indexing them means extremely fast lookup times for the adjacent nodes. It is for this reason the SQL graph representation is so fast, and why it was our best choice for data structure.
+The SQL graph database is made of three tables, one for movies, one for actors, and one for edges. The former two have the above stated attributes, and are indexed by their respective IDs for fast lookup times. The latter is an \verb+adjacency_list+, chosen due to the high amount of queries to what nodes are connected to a specific node (Rather than querying whether two nodes are connected, for which an \verb+adjacency_matrix+ is useful). The edges are between IDs, and because the edges are between IDs, this allows for a handy optimization, as the IDs are guaranteed to be unique, indexing them means extremely fast lookup times for the adjacent nodes. It is for this reason the SQL graph representation is so fast, and why it was our best choice for data structure.
 
 \subsection{The Graph Processing}
 
-Now that the graph is created, we want to find the shortest path between two actors. There are various helper functions assisting the pathfinding, but there are two functions actually doing the work, \verb+get_path+ and \verb+get_restricted_path+ for a normal, and restricted path respectively. The algorithm in use is a Breadth First Search, and makes use of the \verb+deque+ data structure provided by Python. During the restricted path search, we take in the restrictions we desire, and before adding it to the queue, it's attributes in the database are checked against the requirements using an SQL query.
+Now that the graph is created, we want to find the shortest path between two actors. There are various helper functions assisting the pathfinding, but there are two functions actually doing the work, \verb+get_path+ and \verb+get_restricted_path+ for a normal, and restricted path respectively. The algorithm in use is a Breadth First Search, and makes use of the \verb+deque+ data structure provided by Python. During the restricted path search, we filter in only nodes matching the restrictions we desire before adding it to the queue. This is checked for by using an SQL query.
 
-We felt it would be best to \emph{show} the user what their path looks like, instead of just listing the movies and actors. This is why once a path is found, the \verb!make_networkx_graph! method takes the path, and returns a colour-coded graph. Green for the end-points, salmon for the movies, and bisque for the people. This is done with the \verb+networkx.Graph+ class. Though we couldn't use it for the large database, its \verb!draw! methods made it invaluable in representing graphs, and the memory problem it created didn't exist on such a small scale.  
+We felt it would be best to \emph{show} the user what their path looks like, instead of just listing the movies and actors. This is why once a path is found, the \verb!make_networkx_graph! method takes the path, and returns a colour-coded graph. Green for the end-points, salmon for the movies, and bisque for the people. This is done with the \verb+networkx.Graph+ class. Though we couldn't use it for the large database, its \verb!draw! methods made it invaluable in representing graphs, and the memory problem it created doesn't exist on such a small scale.  
 
 \subsection{The User Interface}
+The user interface is a window that makes use of the \verb!tkinter! toolkit. It is split up into four main sections, to the right is the user interface, what the user will interact with to get an output, and to the left is the output, where the user will see the graph and additional information about their query to the bottom. To the right the user has the ability to input two actors, and then choose a filter on the recency of the movie, and whether the actor is dead or alive. This is all implemented using \verb!tkinter! \verb!Frame!, \verb!Button!, and \verb!OptionMenu! objects. The graph is plotted using \verb!matplotlib!'s \verb!plotly!, and take the output from the previous step's \verb!make_networkx_graph! and plots it onto the window.
 
-From this dataset we will create individual nodes using the actor dataset, with actor IDs and actor names as attributes, then connect them with edges using the “principals” dataset with edges that have the attributes of the connecting movies (movie name and ID) to create a graph to represent our actor connectedness. Our vertices of this graph will be actors, with edges between actors being the existence of a movie they were both in. To find the connections and distances between actors, we will use pathfinding algorithms on our graphs, for which there have been many well documented examples we can pull on. Since we have an undirected, unweighted graph, we can just use BFS ("Breadth First Search"). However, we are also considering introducing weights to our edges if we can find a reasonable weighting scheme, and this might require more complex path-finding algorithm like Djikstra’s ("Find Shortest Paths using Dijkstra's Algorithm”) or A* ("A* search algorithm"). \\\\
-We will be building the data type from the ground up, and we will need to read the data, which is stored as a TSV, and process it into nodes and edges. This processing will require usage of the csv module’s TSV capabilities ("CSV File Reading and Writing"). To do this we will be processing three data sets from the given data set. Due to how it is set up, there will be three main data variables; two dictionaries will relate the id to the name, one for the movies and one for the people, and a graph will relate people ids, with edges representing movies both people have acted in.\\\\
-The graph specifically will be the data structure created by NetworkX. This is specifically for the fact that it allows for attributes on the nodes and edges, and has support for multigraphs, as two actors may have acted in multiple movies together, and in fact may act in multiple movies together on purpose. The edges will have an attribute for the movie’s id, and the nodes will have the id of the actor. By doing this, we can easily output the graph for found path’s nodes, as we can use the subgraph method for graphs in NetworkX to receive a graph that can be printed with all the necessary information. NetworkX will be what creates the graph itself, as after getting the subgraph, NetworkX can draw the graph with matplotlib ("Drawing Documentation"). The induced subgraph will include random connected nodes for aesthetics, and in the cases where two actors have played in many movies together, the induced subgraph will only include some of those edges. \\\\
-To process the user input, we will use the GUI library tkinter. Tkinter functions by creating a Tk class which serves as a window container for miscellaneous “widgets”. These widgets will be our interactable elements such as text input fields and buttons to allow the user to more easily interact with the program than just a CLI ("tkinter"). Once the user inputs their query and it is processed by the program, we will display the result using NetworkX. What will happen is we will make a call to the NetworkX draw method to draw the graph itself, before making a call to the NetworkX draw\_networkx\_edge\_labels method and finally making a call to the matplotlib method draw which will open the graph in a new window ("Matplotlib 3.1.2 documentation").
+\section{Obtaining the Datasets and Running the Program}
+If you so desire you can build the full graph dataset from scratch by downloading the files in the IMDb dataset (3) then running the file \verb!sql_processing.py! and following the instructions given. I don't recommend this method unless you are really curious, as this can take upwards of 15 minutes for the first part of dataset creation, and up to 5 minutes for the second. 
+
+Instead we will provide the graph dataset. It will be called \textbf{actors\_and\_movies.db}, and please keep it that way. Then put this file into a folder \textbf{data\_files} within the same directory as \verb!main.py!.
+
+To access the zip file of the file necessary to run the program, please access this link: \href{https://utoronto-my.sharepoint.com/:u:/g/personal/nabhan_rashid_mail_utoronto_ca/EYMbuqB8-ARIrHxDK7YhbWkBS4cH6Imba-6myQPnr1z57w?e=JQY8F9}{OneDrive Link}
+
+These files include the original data sets from IMDb, and the \verb!main_database.db! created during the first step of the 
+
+This program has 3 dependencies, they are listed in \verb!requirements.txt!, but they will also be listed here:
+\begin{enumerate}
+\item \verb!networkx==3.4.2!
+\item \verb!matplotlib==3.10.1!
+\item \verb!scipy==1.15.0!
+\end{enumerate}
+These can be found through PyCharm, so we do not believe they require special installation instructions.
+
+Upon running this program, you can expect to see a new window open (You might have to click it from the taskbar) with intractable boxes on the left, and an empty space for the graph on the right. To start with, we recommend choosing two actors without any restrictions, just to get the hang of the program. Type their names in within the given space, then click \verb+Go!+ After getting used to it, you can add restrictions, perhaps find a path with movies only made after 2000, or a path between two dead actors.
 
 \section{Bibliography}
 
@@ -53,25 +69,9 @@ To process the user input, we will use the GUI library tkinter. Tkinter function
 
 (2) “Wikipedia:Wiki Game.” Wikipedia, https://en.wikipedia.org/wiki/Wikipedia:Wiki\_Game. Accessed 1 March 2025.\\\\
 
-Belwariar, Rachit. “A* Search Algorithm.” GeeksforGeeks, 30 July 2024, https://www.geeksforgeeks.org/a-search-algorithm/. Accessed 4 March 2025.\\\\
-
 (2) Chayes, Lincoln, et al. “Erdős number.” Wikipedia, https://en.wikipedia.org/wiki/Erd\%C5\%91s\_number. Accessed 1 March 2025.\\\\
 
 (3) IMDB. “IMDb Data Files.” IMDb Data Files Download, 2024, https://datasets.imdbws.com/. Accessed 1 March 2025.\\\\
-
-“csv — CSV File Reading and Writing — Python 3.13.2 documentation.” Python Docs, https://docs.python.org/3/library/csv.html. Accessed 5 March 2025.\\\\
-
-
-“Documentation for Show.” matplotlib.pyplot.show - "Matplotlib 3.1.2 documentation." Accessed March 2, 2025. https://matplotlib.org/3.1.1/api/\_as\_gen/matplotlib.pyplot.show.html.\\\\
-
-“Drawing Documentation.” Drawing - NetworkX 3.4.2 documentation. Accessed March 2, 2025. https://networkx.org/documentation/stable/reference/drawing.html.\\\\
-
-Jain, Sandeep. “Breadth First Search or BFS for a Graph.” GeeksforGeeks, 26 February 2025, https://www.geeksforgeeks.org/breadth-first-search-or-bfs-for-a-graph/. Accessed 2 March 2025.\\\\
-
-Jain, Sandeep. “Find Shortest Paths from Source to all Vertices using Dijkstra's Algorithm.” GeeksforGeeks, 26 February 2025, https://www.geeksforgeeks.org/dijkstras-shortest-path-algorithm-greedy-algo-7/. Accessed 2 March 2025.\\\\
-
-“tkinter — Python interface to Tcl/Tk — Python 3.13.2 documentation.” Python Docs, https://docs.python.org/3/library/tkinter.html\#module-tkinter. Accessed 3 March 2025.\\\\
-
 
 
 

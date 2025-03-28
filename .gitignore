@@ -6,6 +6,7 @@ project_writeup/project_report.aux
 project_writeup/project_report.log
 project_writeup/project_report.pdf
 project_writeup/project_report.synctex.gz
+project_writeup/project_report.out
 
 __pycache__/
 function_to_compile_specific_movies.py
