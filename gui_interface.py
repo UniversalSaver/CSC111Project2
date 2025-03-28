@@ -1,8 +1,16 @@
 """
-A file with functions for creating the window which the user will use. Will use tkinter. The buttons will make calls
-to functions in graph_processing.py
+Module Description
+==================
+A file with functions for creating the window which the user will use. Uses tkinter.
+The buttons make calls to functions in graph_processing.py.
 
-# TODO - add copyright
+Copyright and Usage Information
+===============================
+This file is solely provided for the use in grading and review of the named student's
+work by the TAs and Professors of CSC111. All further distribution of this code whether
+as is or modified is firmly prohibited.
+
+This file is Copyright (c) Nabhan Rashid, Danny Tran, and Tai Poole
 """
 import time
 from tkinter.font import Font

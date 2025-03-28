@@ -1,7 +1,18 @@
 """
-The file where functions for processing the data will be.
+Module Description
+==================
+A file with all manners of graph processing given an SQL database graph created by sql_processing.
+These processings include finding the shortest path between two nodes, finding the shortest path
+given various restrictions on the nodes, and processing a found path into a colour coded graph
+for printing purposes.
 
-# TODO - add copyright
+Copyright and Usage Information
+===============================
+This file is solely provided for the use in grading and review of the named student's
+work by the TAs and Professors of CSC111. All further distribution of this code whether
+as is or modified is firmly prohibited.
+
+This file is Copyright (c) Nabhan Rashid, Danny Tran, and Tai Poole
 """
 import os
 import sqlite3 as sql

@@ -1,7 +1,25 @@
 """
+Module Description
+==================
 A file that does all the necessary SQL processing for the data set. Creates an SQL database that acts like a graph
 
+That graph has three tables, actor, movie, and edge.
+    - actor has information about the actors, indexed and uniquely identified by their ID, it also has name,
+    primary profession, birth year, and death year.
+    - movie has information about the movies, indexed and uniquely identitified by their ID. It also has title, start
+    year, end year, and other information about the movie.
+    - edge has information about which actor has played in what movie, stored as an adjacency list, based on the IDs
+    of the movies and actors. The adjacency list itself is comma separated values (IDs)
+
 This is created because the raw graph takes upwards of 15 GB of RAM to use, and that is simply too much.
+
+Copyright and Usage Information
+===============================
+This file is solely provided for the use in grading and review of the named student's
+work by the TAs and Professors of CSC111. All further distribution of this code whether
+as is or modified is firmly prohibited.
+
+This file is Copyright (c) Nabhan Rashid, Danny Tran, and Tai Poole
 """
 import sqlite3 as sql
 import csv
@@ -47,7 +65,7 @@ def compile_full_data(main_database: str) -> str:
     with sql.connect(main_database) as connection:
         cursor = connection.cursor()
 
-        with open(ID_TO_ACTOR) as file:
+        with open(ID_TO_ACTOR, encoding='UTF-8') as file:
             reader = csv.reader(file, delimiter='\t')
 
             header = next(reader)
@@ -67,7 +85,7 @@ def compile_full_data(main_database: str) -> str:
             cursor.execute("""CREATE UNIQUE INDEX idx_actor_id ON actor(nconst)""")
             connection.commit()
 
-        with open(ID_TO_MOVIE) as file:
+        with open(ID_TO_MOVIE, encoding='UTF-8') as file:
             reader = csv.reader(file, delimiter='\t')
 
             header = next(reader)
@@ -88,7 +106,7 @@ def compile_full_data(main_database: str) -> str:
             cursor.execute("""CREATE UNIQUE INDEX idx_movie_id ON movie(tconst)""")
             connection.commit()
 
-        with open(MOVIE_TO_ACTOR) as file:
+        with open(MOVIE_TO_ACTOR, encoding='UTF-8') as file:
             reader = csv.reader(file, delimiter='\t')
 
             header = next(reader)
@@ -267,7 +285,7 @@ def create_actor_table(creation_database_name: str, main_database: str) -> None:
 
 
 if __name__ == '__main__':
-    import python_ta
+    # import python_ta
 
     # python_ta.check_all(config={
     #     'max-line-length': 120,
