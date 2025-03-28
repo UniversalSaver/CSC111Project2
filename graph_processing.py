@@ -303,7 +303,7 @@ class ShortestActorGraph:
         else:
             return True
 
-    def get_restricted_path(self, actor1: str, actor2: str, check_is_alive: str = "", released_before: int = 9999, released_after: int = 0) -> list[str]:
+    def get_restricted_path(self, actor1: str, actor2: str, check_is_alive: str = "Any", released_before: int = 9999, released_after: int = 0) -> list[str]:
         """
         Given two actor IDs, return the shortest path between the two as a list of actors/movies with the following restrictions:
 
@@ -344,7 +344,7 @@ class ShortestActorGraph:
 
                         # Check for alive/dead if applicable:
                         check_alive = True
-                        if check_is_alive != "" and adjacent[:2] == "nm":
+                        if check_is_alive != "Any" and adjacent[:2] == "nm":
                             # SQL Fetch deathYear
                             cursor.execute("SELECT deathYear FROM actor WHERE id = ?", (adjacent,))
                             alive_status = cursor.fetchone()
